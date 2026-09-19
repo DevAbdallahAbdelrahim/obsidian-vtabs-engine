@@ -50,7 +50,9 @@ export function registerWorkspaceEvents(plugin: Plugin): void {
   // between panes, sidebar toggle. syncLeaves() itself only persists when
   // something structural actually changed, so re-running it liberally here
   // is cheap.
-  plugin.registerEvent(plugin.app.workspace.on("layout-change", () => syncAllLeaves(plugin)));
+  plugin.registerEvent(
+    plugin.app.workspace.on("layout-change", () => syncAllLeaves(plugin)),
+  );
 
   // Fires when focus moves to a different leaf — tracks the active tab for
   // highlighting, and refreshes that leaf's title/viewType immediately
@@ -70,10 +72,12 @@ export function registerWorkspaceEvents(plugin: Plugin): void {
       if (leafId) {
         store.updateLeafBinding(leafId, leaf);
       }
-    })
+    }),
   );
 
   // File renames change a leaf's display text without necessarily firing
   // layout-change — re-running the full sync keeps titles accurate.
-  plugin.registerEvent(plugin.app.workspace.on("rename", () => syncAllLeaves(plugin)));
+  plugin.registerEvent(
+    plugin.app.vault.on("rename", () => syncAllLeaves(plugin)),
+  );
 }

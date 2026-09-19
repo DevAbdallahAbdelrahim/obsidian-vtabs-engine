@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useMemo, useCallback } from "react";
 import { useTabStore, EMPTY_ARRAY } from "../../store/tab-store";
-import { filterTree, isNodeVisible } from "../../engine/search-engine";
+import { filterTree, isNodeVisible } from "../../utils/tree-utils";
 import { TabGroupNode } from "./TabGroupNode";
 import { TabItemNode } from "./TabItemNode";
 import { ObsidianIcon } from "./ObsidianIcon";
 import { CustomTreeNode } from "../../types/tree";
 import { usePlugin, useSettings } from "../context/plugin-context";
-import { RenameModal } from "../modals/rename-modal";
+import { RenameModal } from "../../modals/rename-modal";
 
 /**
  * The root recursive tree renderer (Section 3: "Recursive DFS UI Rendering").

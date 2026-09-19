@@ -6,10 +6,10 @@ import { useTabStore, EMPTY_ARRAY } from "../../store/tab-store";
 import { ObsidianIcon } from "./ObsidianIcon";
 import { resolveNodeIcon } from "../../engine/icon-engine";
 import { usePlugin, useSettings } from "../context/plugin-context";
-import { RenameModal } from "../modals/rename-modal";
-import { IconPickerModal } from "../modals/icon-picker-modal";
-import { ColorPickerModal } from "../modals/color-picker-modal";
-import { GroupPickerModal } from "../modals/group-picker-modal";
+import { RenameModal } from "../../modals/rename-modal";
+import { IconPickerModal } from "../../modals/icon-picker-modal";
+import { ColorPickerModal } from "../../modals/color-picker-modal";
+import { GroupPickerModal } from "../../modals/group-picker-modal";
 
 const DRAG_MIME = "text/tab-engine-node-id";
 

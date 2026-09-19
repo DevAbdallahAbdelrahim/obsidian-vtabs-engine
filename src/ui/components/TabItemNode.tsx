@@ -5,10 +5,10 @@ import { TabNode } from "../../types/tree";
 import { useTabStore } from "../../store/tab-store";
 import { ObsidianIcon } from "./ObsidianIcon";
 import { resolveNodeIcon } from "../../engine/icon-engine";
-import { getSiblingIds } from "../../engine/tree-utils";
+import { getSiblingIds } from "../../utils/tree-utils";
 import { usePlugin, useSettings } from "../context/plugin-context";
-import { RenameModal } from "../modals/rename-modal";
-import { GroupPickerModal } from "../modals/group-picker-modal";
+import { RenameModal } from "../../modals/rename-modal";
+import { GroupPickerModal } from "../../modals/group-picker-modal";
 
 const DRAG_MIME = "text/tab-engine-node-id";
 
@@ -51,12 +51,17 @@ function TabItemNodeImpl({ node, depth }: TabItemNodeProps): React.ReactElement 
 
       menu.addItem((item) =>
         item
-          .setTitle(node.leaf?.pinned ? "Unpin tab" : "Pin tab")
+          // WorkspaceLeaf has no public `pinned` property (confirmed against
+          // Obsidian's own API docs — only setPinned()/togglePinned() are
+          // exposed on the leaf itself). The readable field lives on
+          // ViewState, which getViewState() returns and IS publicly typed
+          // (ViewState.pinned?: boolean) — so no `any` cast is needed.
+          .setTitle(node.leaf?.getViewState().pinned ? "Unpin tab" : "Pin tab")
           .setIcon("pin")
           .onClick(() => {
             const leaf = node.leaf;
             if (!leaf) return;
-            leaf.setPinned(!leaf.pinned);
+            leaf.setPinned(!leaf.getViewState().pinned);
           })
       );
 

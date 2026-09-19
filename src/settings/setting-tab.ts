@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type TabEnginePlugin from "../main";
-import { IconPickerModal } from "../ui/modals/icon-picker-modal";
+import { IconPickerModal } from "../modals/icon-picker-modal";
 import { DEFAULT_SETTINGS } from "../types/plugin-settings";
 import { useTabStore } from "../store/tab-store";
 

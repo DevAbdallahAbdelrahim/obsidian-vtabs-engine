@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal } from "obsidian";
-import { ICON_PICKER_OPTIONS } from "../../engine/icon-engine";
+import { ICON_PICKER_OPTIONS } from "../engine/icon-engine";
 
 /**
  * FuzzySuggestModal for picking a Lucide icon name, used by both the group

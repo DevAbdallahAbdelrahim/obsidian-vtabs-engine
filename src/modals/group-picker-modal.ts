@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal } from "obsidian";
-import { CustomTreeNode, GroupNode } from "../../types/tree";
+import { CustomTreeNode, GroupNode } from "../types/tree";
 
 /** Sentinel representing "move to root level, no group" in the picker list. */
 const ROOT_SENTINEL: GroupNode = {

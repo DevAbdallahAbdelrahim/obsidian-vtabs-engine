@@ -11,7 +11,7 @@ import {
   serializeTreeState,
   deserializeTreeState,
   validateTreeIntegrity,
-} from "./persistence";
+} from "../utils/persistence";
 
 // ─── Reference-Stable Empty Fallbacks ────────────────────────────────────────
 // Module-scoped constants prevent selector-driven infinite re-renders.

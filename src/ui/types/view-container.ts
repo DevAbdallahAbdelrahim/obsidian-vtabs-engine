@@ -44,11 +44,10 @@ export class TabEngineView extends ItemView {
 
     this.root = createRoot(container);
     this.root.render(
-      React.createElement(
-        PluginContextProvider,
-        { plugin: this.plugin },
-        React.createElement(VirtualTabList)
-      )
+      React.createElement(PluginContextProvider, {
+        plugin: this.plugin,
+        children: React.createElement(VirtualTabList),
+      })
     );
   }
 

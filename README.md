@@ -6,7 +6,10 @@
 
 **VTabs Engine** is a high-performance, tree-structured vertical tab manager for Obsidian. Designed for power users, it replaces standard horizontal tab strips with a clean, responsive vertical sidebar hierarchy featuring group management, custom styling, instant search, and zero-overhead performance.
 
-![VTabs Engine Main Sidebar Interface](assets/main-sidebar-view.png)
+#### VTabs Engine Main Sidebar Interface
+
+<img width="850" height="769" alt="main-sidebar-view" src="https://github.com/user-attachments/assets/971f22d6-5fcf-45aa-89e8-5d2ddb386494" />
+
 
 ---
 
@@ -15,17 +18,25 @@
 ### 🌲 Tree Hierarchy & Tab Grouping
 Organize open tabs and custom groups in a collapsible vertical tree structure with item counter badges.
 
-![Grouped Vertical Tabs View](assets/grouped-tabs-view.png)
+Grouped Vertical Tabs View
+<img width="847" height="910" alt="grouped-tabs-view" src="https://github.com/user-attachments/assets/21e475bd-cf87-4f92-88f0-0a57b0512d84" />
+
+---
 
 ### 🎨 Custom Accent Colors & Icons
 Assign distinct colors and Lucide icons to individual tab groups for fast visual identification.
 
-![Color Picker Modal](assets/color-picker-modal.png)
+#### Color Picker Modal
+<img width="1917" height="890" alt="color-picker-modal" src="https://github.com/user-attachments/assets/76ac5e87-cded-4b76-b57a-1f8451776377" />
+
+---
 
 ### 🛠️ Inline Management Modals
 Rename groups and manage workspace organization effortlessly via built-in modals.
 
-![Rename Group Modal](assets/rename-modal.png)
+#### Rename Group Modal
+<img width="1916" height="756" alt="rename-modal" src="https://github.com/user-attachments/assets/a7c264d2-849c-42c0-85b6-4adea6705463" />
+
 
 ### ⚡ Additional Core Capabilities
 - **Flat-Map Zustand Store**: Reactive state management decoupled from heavy render loops for smooth handling of dozens of tabs.
@@ -38,7 +49,8 @@ Rename groups and manage workspace organization effortlessly via built-in modals
 
 Fine-tune the sidebar interface directly from Obsidian's Plugin Settings tab. Customize ribbon icon style, toggle tab icons, adjust nesting indent size, or enable compact view.
 
-![VTabs Engine Settings Page](assets/settings-page.png)
+#### VTabs Engine Settings Page
+<img width="1047" height="819" alt="settings-page" src="https://github.com/user-attachments/assets/3910d4e1-2d75-45e7-8b22-ee5a97b6538e" />
 
 ---
 

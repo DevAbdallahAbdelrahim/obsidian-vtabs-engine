@@ -22,6 +22,7 @@ Organize open tabs and custom groups in a collapsible vertical tree structure wi
 
 <img width="847" height="910" alt="grouped-tabs-view" src="https://github.com/user-attachments/assets/ab785d39-02e7-4453-b349-4bfa841d9a66" />
 
+-----
 
 ### 🎨 Custom Accent Colors & Icons
 

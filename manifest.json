@@ -3,7 +3,7 @@
   "name": "VTabs Engine",
   "version": "1.0.0",
   "minAppVersion": "1.12.0",
-  "description": "Manual, nested vertical tab management for Obsidian — group and organize Markdown, Canvas, Graph, Bases, and PDF tabs exactly the way you want, with zero forced auto-grouping",
+  "description": "Manual, nested vertical tab management for Obsidian,group and organize Markdown, Canvas, Graph, Bases, and PDF tabs exactly the way you want and with zero forced auto grouping",
   "author": "Abdallah Abdelrahim",
   "authorUrl": "https://github.com/DevAbdallahAbdelrahim",
   "isDesktopOnly": false

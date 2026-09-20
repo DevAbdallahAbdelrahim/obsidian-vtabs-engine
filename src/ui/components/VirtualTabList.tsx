@@ -8,6 +8,7 @@ import { ObsidianIcon } from "./ObsidianIcon";
 import { CustomTreeNode } from "../../types/tree";
 import { usePlugin, useSettings } from "../context/plugin-context";
 import { RenameModal } from "../../modals/rename-modal";
+import { useTreeZoom, ZoomControls } from "../../features/tree-zoom";
 
 /**
  * The root recursive tree renderer (Section 3: "Recursive DFS UI Rendering").
@@ -29,9 +30,14 @@ export function VirtualTabList(): React.ReactElement {
   const setSearchQuery = useTabStore((s) => s.setSearchQuery);
   const createGroup = useTabStore((s) => s.createGroup);
 
+  // Hook الخاصة بالزوم والتحكم بنسبة التكبير
+  const { zoomLevel, zoomIn, zoomOut, resetZoom, zoomRef } = useTreeZoom();
+
   // Rule 2 + reference-stable fallback: EMPTY_ARRAY keeps this useMemo's
   // dependency stable across renders in the (defensive) case rootIds is malformed.
-  const safeRootIds: readonly string[] = Array.isArray(rootIds) ? rootIds : EMPTY_ARRAY;
+  const safeRootIds: readonly string[] = Array.isArray(rootIds)
+    ? rootIds
+    : EMPTY_ARRAY;
 
   const visibleIds = useMemo(() => {
     const trimmed = searchQuery.trim();
@@ -72,7 +78,10 @@ export function VirtualTabList(): React.ReactElement {
   };
 
   return (
-    <div className={`tab-engine-panel${settings.compactView ? " is-compact" : ""}`}>
+    <div
+      className={`tab-engine-panel${settings.compactView ? " is-compact" : ""}`}
+      style={{ "--tab-engine-zoom-scale": zoomLevel } as React.CSSProperties}
+    >
       <div className="tab-engine-toolbar">
         <div className="tab-engine-search">
           <ObsidianIcon name="search" />
@@ -102,14 +111,23 @@ export function VirtualTabList(): React.ReactElement {
         >
           <ObsidianIcon name="folder-plus" />
         </button>
+
+        {/* أزرار التحكم بالزوم داخل شريط الأدوات */}
+        <ZoomControls
+          zoomLevel={zoomLevel}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onResetZoom={resetZoom}
+        />
       </div>
 
-      <div className="tab-engine-tree-root">
+      <div className="tab-engine-tree-root" ref={zoomRef}>
         {safeRootIds.length === 0 ? (
           <div className="tab-engine-empty-state">
             <p>No open tabs yet.</p>
             <p className="tab-engine-empty-hint">
-              Open a file, canvas, or view and it will appear here automatically.
+              Open a file, canvas, or view and it will appear here
+              automatically.
             </p>
           </div>
         ) : (

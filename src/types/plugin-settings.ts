@@ -25,11 +25,14 @@ export interface PluginSettings {
   compactView: boolean;
 
   /**
+   * Sidebar density scale, applied as the --tab-engine-zoom-scale CSS
+   * variable. Range 0.75–1.50 in 0.05 steps; 1.0 = 100%.
+   */
+  zoomLevel: number;
+
+  /**
    * The persisted structural tree: manual group definitions and tab ordering.
    * This is the ONLY field that gets read by hydrateStore() on startup.
-   *
-   * What is saved:  GroupNode definitions + TabNode metadata (leafId, viewType, title).
-   * What is NOT saved: live WorkspaceLeaf objects (stripped at serialization time).
    */
   savedTreeState: SerializedTreeState;
 }
@@ -42,6 +45,7 @@ export const DEFAULT_SETTINGS: Readonly<PluginSettings> = {
   defaultGroupIcon: "folder",
   indentSize: 14,
   compactView: false,
+  zoomLevel: 1.0,
   savedTreeState: {
     nodes: {},
     rootIds: [],

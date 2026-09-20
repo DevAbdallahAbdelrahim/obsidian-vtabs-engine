@@ -16,9 +16,23 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+
+    /* Zoom scale variables */
+    --tab-engine-font-size: calc(
+        var(--font-ui-small) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-icon-size: calc(
+        var(--icon-s, 16px) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-item-padding-v: calc(
+        var(--size-4-1) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-item-padding-h: calc(
+        var(--size-4-2) * var(--tab-engine-zoom-scale, 1)
+    );
 }
 
-/* ── Toolbar: search + new group ─────────────────────────────────────── */
+/* ── Toolbar: search + new group + zoom controls ─────────────────────── */
 
 .tab-engine-toolbar {
     display: flex;
@@ -107,9 +121,9 @@
     display: flex;
     align-items: center;
     gap: var(--size-4-2);
-    padding-top: var(--size-4-1);
-    padding-bottom: var(--size-4-1);
-    padding-right: var(--size-4-2);
+    padding-top: var(--tab-engine-item-padding-v);
+    padding-bottom: var(--tab-engine-item-padding-v);
+    padding-right: var(--tab-engine-item-padding-h);
     margin: 0 var(--size-4-1);
     border-radius: var(--radius-s);
     cursor: pointer;
@@ -137,7 +151,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: var(--font-ui-small);
+    font-size: var(--tab-engine-font-size);
 }
 
 /* ── Drag & drop feedback ─────────────────────────────────────────────── */
@@ -224,8 +238,8 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: var(--icon-s, 16px);
-    height: var(--icon-s, 16px);
+    width: var(--tab-engine-icon-size);
+    height: var(--tab-engine-icon-size);
     color: var(--text-muted);
 }
 
@@ -263,4 +277,25 @@
 
 .tab-engine-rename-setting input[type="text"] {
     width: 100%;
+}
+
+/* ── Zoom controls ────────────────────────────────────────────────────── */
+
+.tab-engine-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tab-engine-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: var(--radius-s);
+}
+
+.tab-engine-zoom-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }

@@ -41,6 +41,7 @@ const context = await esbuild.context({
 
 if (prod) {
   await context.rebuild();
+  console.log("BUILD SUCCESSFUL!"); // 👈 طباعة الرسالة قبل إنهاء العملية
   process.exit(0);
 } else {
   await context.watch();

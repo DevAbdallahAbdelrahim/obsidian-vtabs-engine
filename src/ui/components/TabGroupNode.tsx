@@ -10,6 +10,7 @@ import { RenameModal } from "../../modals/rename-modal";
 import { IconPickerModal } from "../../modals/icon-picker-modal";
 import { ColorPickerModal } from "../../modals/color-picker-modal";
 import { GroupPickerModal } from "../../modals/group-picker-modal";
+import { GroupSplitButton } from "../../features/group-workspace-split";
 
 const DRAG_MIME = "text/tab-engine-node-id";
 
@@ -23,13 +24,15 @@ interface TabGroupNodeProps {
 /** Walks a group's subtree, returning its own ID plus every nested group ID. */
 function collectGroupAndDescendantIds(
   nodes: Record<string, CustomTreeNode>,
-  groupId: string
+  groupId: string,
 ): Set<string> {
   const ids = new Set<string>([groupId]);
   const node = nodes[groupId];
   if (!node || node.type !== "group") return ids; // Rule 5: strict discriminant
 
-  const childrenIds = Array.isArray(node.childrenIds) ? node.childrenIds : EMPTY_ARRAY; // Rule 2
+  const childrenIds = Array.isArray(node.childrenIds)
+    ? node.childrenIds
+    : EMPTY_ARRAY; // Rule 2
   for (const childId of childrenIds) {
     if (nodes[childId]?.type === "group") {
       for (const id of collectGroupAndDescendantIds(nodes, childId)) {
@@ -59,14 +62,16 @@ function TabGroupNodeImpl({
 
   const icon = resolveNodeIcon(node, settings.defaultGroupIcon);
   // Rule 2 + reference-stable fallback (module-scoped EMPTY_ARRAY, never a fresh `[]`)
-  const childrenIds = Array.isArray(node.childrenIds) ? node.childrenIds : EMPTY_ARRAY;
+  const childrenIds = Array.isArray(node.childrenIds)
+    ? node.childrenIds
+    : EMPTY_ARRAY;
 
   const handleToggle = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation(); // Rule 4: must not bubble to an ancestor group's header
       toggleCollapse(node.id);
     },
-    [node.id, toggleCollapse]
+    [node.id, toggleCollapse],
   );
 
   const handleContextMenu = useCallback(
@@ -84,7 +89,7 @@ function TabGroupNodeImpl({
             new RenameModal(plugin.app, node.title, (newTitle) => {
               renameNode(node.id, newTitle);
             }).open();
-          })
+          }),
       );
 
       menu.addItem((item) =>
@@ -95,7 +100,7 @@ function TabGroupNodeImpl({
             new IconPickerModal(plugin.app, (iconName) => {
               setNodeIcon(node.id, iconName);
             }).open();
-          })
+          }),
       );
 
       menu.addItem((item) =>
@@ -106,7 +111,7 @@ function TabGroupNodeImpl({
             new ColorPickerModal(plugin.app, node.color, (color) => {
               setNodeColor(node.id, color);
             }).open();
-          })
+          }),
       );
 
       menu.addItem((item) =>
@@ -115,10 +120,13 @@ function TabGroupNodeImpl({
           .setIcon("folder-input")
           .onClick(() => {
             const excludeIds = collectGroupAndDescendantIds(nodes, node.id);
-            new GroupPickerModal(plugin.app, nodes, excludeIds, (targetParentId) =>
-              moveNode(node.id, targetParentId)
+            new GroupPickerModal(
+              plugin.app,
+              nodes,
+              excludeIds,
+              (targetParentId) => moveNode(node.id, targetParentId),
             ).open();
-          })
+          }),
       );
 
       menu.addSeparator();
@@ -127,12 +135,21 @@ function TabGroupNodeImpl({
         item
           .setTitle("Delete group (keep tabs)")
           .setIcon("trash")
-          .onClick(() => deleteGroup(node.id))
+          .onClick(() => deleteGroup(node.id)),
       );
 
       menu.showAtMouseEvent(e.nativeEvent);
     },
-    [node, plugin, nodes, renameNode, setNodeIcon, setNodeColor, moveNode, deleteGroup]
+    [
+      node,
+      plugin,
+      nodes,
+      renameNode,
+      setNodeIcon,
+      setNodeColor,
+      moveNode,
+      deleteGroup,
+    ],
   );
 
   const handleDragStart = useCallback(
@@ -141,7 +158,7 @@ function TabGroupNodeImpl({
       e.dataTransfer.setData(DRAG_MIME, node.id);
       e.dataTransfer.effectAllowed = "move";
     },
-    [node.id]
+    [node.id],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -171,12 +188,14 @@ function TabGroupNodeImpl({
       // Drop-on-group-header = "nest inside this group" (append to end).
       moveNode(draggedId, node.id);
     },
-    [node.id, nodes, moveNode]
+    [node.id, nodes, moveNode],
   );
 
   const headerStyle: React.CSSProperties = {
     paddingLeft: depth * settings.indentSize,
-    ...(node.color ? ({ "--tab-engine-accent": node.color } as React.CSSProperties) : {}),
+    ...(node.color
+      ? ({ "--tab-engine-accent": node.color } as React.CSSProperties)
+      : {}),
   };
 
   return (
@@ -193,12 +212,15 @@ function TabGroupNodeImpl({
         onDrop={handleDrop}
         title={node.title}
       >
-        <span className={`tab-engine-chevron${node.isCollapsed ? "" : " is-expanded"}`}>
+        <span
+          className={`tab-engine-chevron${node.isCollapsed ? "" : " is-expanded"}`}
+        >
           <ObsidianIcon name="chevron-right" />
         </span>
         <ObsidianIcon name={icon} />
         <span className="tab-engine-group-title">{node.title}</span>
         <span className="tab-engine-group-count">{childrenIds.length}</span>
+        <GroupSplitButton groupId={node.id} />
       </div>
 
       {!node.isCollapsed && (

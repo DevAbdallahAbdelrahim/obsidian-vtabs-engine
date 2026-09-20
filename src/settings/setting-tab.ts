@@ -17,7 +17,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "TabEngine settings" });
+    new Setting(containerEl).setName("TabEngine settings").setHeading();
 
     new Setting(containerEl)
       .setName("Ribbon icon style")
@@ -78,7 +78,6 @@ export class TabEngineSettingTab extends PluginSettingTab {
         slider
           .setLimits(8, 32, 2)
           .setValue(this.plugin.settings.indentSize)
-          .setDynamicTooltip()
           .onChange(async (value) => {
             this.plugin.settings.indentSize = value;
             await this.plugin.saveSettings();
@@ -95,7 +94,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
         })
       );
 
-    containerEl.createEl("h3", { text: "Danger zone" });
+    new Setting(containerEl).setName("Danger zone").setHeading();
 
     const resetSetting = new Setting(containerEl)
       .setName("Reset tab layout")

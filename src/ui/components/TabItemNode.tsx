@@ -143,7 +143,7 @@ function TabItemNodeImpl({ node, depth }: TabItemNodeProps): React.ReactElement 
     <div
       className={`tab-engine-item${isActive ? " is-active" : ""}${
         isDragOver ? " is-drag-over" : ""
-      }`}
+      }${node.detached ? " is-detached" : ""}`}
       style={{ paddingLeft: depth * settings.indentSize }}
       draggable
       onClick={handleClick}
@@ -152,10 +152,13 @@ function TabItemNodeImpl({ node, depth }: TabItemNodeProps): React.ReactElement 
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      title={node.title}
+      title={node.detached ? `${node.title} (hidden — toggle its group to restore)` : node.title}
     >
       {settings.showTabIcons && <ObsidianIcon name={icon} />}
       <span className="tab-engine-item-title">{node.title}</span>
+      {node.detached && (
+        <ObsidianIcon name="eye-off" className="tab-engine-item-detached-indicator" />
+      )}
     </div>
   );
 }

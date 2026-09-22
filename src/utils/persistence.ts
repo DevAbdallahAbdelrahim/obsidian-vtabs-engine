@@ -92,6 +92,11 @@ export function deserializeTreeState(saved: SerializedTreeState | null | undefin
         leaf: undefined, // Populated by syncLeaves()
         ...(node.icon ? { icon: node.icon } : {}),
         ...(node.color ? { color: node.color } : {}),
+        // Detached-survival fields (older saved files simply won't have
+        // these — defensively optional, same as icon/color above).
+        ...(node.detached ? { detached: true } : {}),
+        ...(node.filePath ? { filePath: node.filePath } : {}),
+        ...(node.viewState ? { viewState: node.viewState } : {}),
       } satisfies TabNode;
     } else if (rawNode.type === "group") {
       const node = rawNode as GroupNode;

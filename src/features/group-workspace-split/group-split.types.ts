@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, SplitDirection } from "obsidian";
+import { WorkspaceLeaf, SplitDirection, ViewState } from "obsidian";
 
 // ─── Public Configuration ──────────────────────────────────────────────────
 
@@ -18,18 +18,32 @@ export interface SplitOptions {
 // store's already-public state (nodes/rootIds + the isTabNode/isGroupNode
 // guards already exported from types/tree.ts).
 
-/** One tab collected from a group (recursively), paired with its live leaf. */
-export interface CollectedLeafEntry {
-  /** The tab's node id in the store — used only for logging/Notice text. */
+/**
+ * A group's direct child tab that is currently LIVE — a candidate for
+ * closing. `leaf` is the tab's own real, permanent leaf (never a copy).
+ */
+export interface AttachedTabEntry {
   nodeId: string;
-  /** Display title, used only for user-facing messages, never for view identity. */
   title: string;
-  /** The live WorkspaceLeaf this tab currently corresponds to. */
-  sourceLeaf: WorkspaceLeaf;
+  leaf: WorkspaceLeaf;
 }
 
-/** Outcome of attempting to populate one collected entry into a new leaf. */
-export interface PopulateOutcome {
+/**
+ * A group's direct child tab that is currently DETACHED (hidden) — a
+ * candidate for restoring. filePath/viewState are what a prior close()
+ * captured; both are required here because only file-backed tabs are ever
+ * marked detached in the first place (see TabNode.filePath's docs).
+ */
+export interface DetachedTabEntry {
+  nodeId: string;
+  title: string;
+  filePath: string;
+  viewState: ViewState;
+}
+
+/** Outcome of attempting to open or close one tab. Shared shape for both
+ *  directions since the reporting need is identical either way. */
+export interface TabActionOutcome {
   nodeId: string;
   title: string;
   success: boolean;
@@ -38,20 +52,7 @@ export interface PopulateOutcome {
 }
 
 /**
- * Full internal result of a split-open attempt.
- *
- * The public `GroupSplitService.openGroupInSplit()` returns `Promise<void>`
- * per spec and surfaces this via a single summary Notice — this richer
- * shape exists so that summary logic (and any future UI/telemetry hook)
- * has real structured data to work with, without changing the public
- * method's return type.
+ * Full internal result of a toggle attempt.
  */
-export interface OpenGroupInSplitOutcome {
-  groupId: string;
-  outcomes: PopulateOutcome[];
-  /**
-   * The first tab that was successfully populated — already focused unless
-   * focusFirstLeaf was false. Null if every tab in the group failed to open.
-   */
-  firstLeaf: WorkspaceLeaf | null;
-}
+export type ToggleGroupSplitOutcome =
+  "opened" | "closed" | "busy" | "empty" | "not-found";

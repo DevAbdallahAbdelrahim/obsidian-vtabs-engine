@@ -24,7 +24,10 @@ interface GroupSplitButtonProps {
  *   themselves change, which in practice never happens for an
  *   already-mounted group row.
  */
-function GroupSplitButtonImpl({ groupId, className }: GroupSplitButtonProps): React.ReactElement {
+function GroupSplitButtonImpl({
+  groupId,
+  className,
+}: GroupSplitButtonProps): React.ReactElement {
   const plugin = usePlugin();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -39,9 +42,9 @@ function GroupSplitButtonImpl({ groupId, className }: GroupSplitButtonProps): Re
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation(); // MUST NOT toggle the group's collapse state
-      void GroupSplitService.openGroupInSplit(groupId, plugin.app);
+      void GroupSplitService.toggleGroupSplit(groupId, plugin);
     },
-    [groupId, plugin]
+    [groupId, plugin],
   );
 
   return (

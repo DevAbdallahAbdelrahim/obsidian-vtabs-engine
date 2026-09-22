@@ -17,8 +17,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    // Replaced "TabEngine settings" with "General" to pass automated review
-    new Setting(containerEl).setName("General").setHeading();
+    // Redundant top heading removed completely to comply with Obsidian review guidelines
 
     new Setting(containerEl)
       .setName("Ribbon icon style")
@@ -116,8 +115,6 @@ export class TabEngineSettingTab extends PluginSettingTab {
 
       btn.setButtonText("Reset layout").onClick(async () => {
         if (!this.resetArmed) {
-          // First click just arms the button — requires a second, deliberate
-          // click within 4s to actually wipe the saved layout.
           this.resetArmed = true;
           btn.setButtonText("Click again to confirm").setCta();
           window.setTimeout(applyIdleLabel, 4000);
@@ -129,7 +126,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
         useTabStore
           .getState()
           .hydrateStore(this.plugin.settings.savedTreeState);
-        this.plugin.syncNow(); // Re-append currently open leaves as fresh root tabs
+        this.plugin.syncNow();
         applyIdleLabel();
         new Notice("TabEngine: tab layout has been reset.");
       });

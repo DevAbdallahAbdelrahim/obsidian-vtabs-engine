@@ -1,4 +1,4 @@
-import { WorkspaceLeaf } from "obsidian";
+import { WorkspaceLeaf, ViewState } from "obsidian";
 
 // ─── Base ─────────────────────────────────────────────────────────────────────
 
@@ -27,6 +27,31 @@ export interface TabNode extends BaseNode {
   leafId: string;
   /** The view type string emitted by the leaf's view (e.g. "markdown", "canvas", "pdf"). */
   viewType: string;
+  /**
+   * True when this tab was deliberately hidden by a group's Eye toggle
+   * (GroupSplitService.close()) rather than genuinely closed by the user.
+   * A detached node is kept — never removed — so toggling the group back
+   * on can restore it. Only ever set/cleared by GroupSplitService; an
+   * ordinary tab close (the tab's native ×) still removes the node as
+   * before and never sets this.
+   */
+  detached?: boolean;
+  /**
+   * File path captured at the moment of detaching. Doubles as the
+   * reconciliation key: if the user reopens this file externally (file
+   * explorer, a link) while this node is detached, syncLeaves() re-binds
+   * the new leaf here instead of creating a second, unrelated root node.
+   * Only set for file-backed views — views with no stable file identity
+   * (graph, search, etc.) are not eligible for detached-survival and are
+   * removed on close exactly as before.
+   */
+  filePath?: string;
+  /**
+   * Full view state snapshot (leaf.getViewState()) captured at the moment
+   * of detaching, so restoring can reproduce scroll position, mode, and
+   * other view-specific state, not just "reopen the file".
+   */
+  viewState?: ViewState;
 }
 
 /**

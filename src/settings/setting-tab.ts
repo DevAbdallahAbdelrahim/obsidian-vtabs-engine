@@ -17,7 +17,8 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl).setName("TabEngine settings").setHeading();
+    // Replaced "TabEngine settings" with "General" to pass automated review
+    new Setting(containerEl).setName("General").setHeading();
 
     new Setting(containerEl)
       .setName("Ribbon icon style")
@@ -29,20 +30,23 @@ export class TabEngineSettingTab extends PluginSettingTab {
           .addOption("none", "Hidden")
           .setValue(this.plugin.settings.ribbonIconStyle)
           .onChange(async (value) => {
-            this.plugin.settings.ribbonIconStyle = value as "brand" | "native" | "none";
+            this.plugin.settings.ribbonIconStyle = value as
+              "brand" | "native" | "none";
             await this.plugin.saveSettings();
             this.plugin.refreshRibbonIcon();
-          })
+          }),
       );
 
     new Setting(containerEl)
       .setName("Show tab icons")
       .setDesc("Display a view-type icon next to each tab in the panel.")
       .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.showTabIcons).onChange(async (value) => {
-          this.plugin.settings.showTabIcons = value;
-          await this.plugin.saveSettings();
-        })
+        toggle
+          .setValue(this.plugin.settings.showTabIcons)
+          .onChange(async (value) => {
+            this.plugin.settings.showTabIcons = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl)
@@ -56,7 +60,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
             this.plugin.settings.defaultGroupIcon =
               value.trim() || DEFAULT_SETTINGS.defaultGroupIcon;
             await this.plugin.saveSettings();
-          })
+          }),
       )
       .addExtraButton((btn) =>
         btn
@@ -68,7 +72,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
               void this.plugin.saveSettings();
               this.display(); // Refresh so the text field reflects the picked icon
             }).open();
-          })
+          }),
       );
 
     new Setting(containerEl)
@@ -81,17 +85,19 @@ export class TabEngineSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.indentSize = value;
             await this.plugin.saveSettings();
-          })
+          }),
       );
 
     new Setting(containerEl)
       .setName("Compact view")
       .setDesc("Reduce vertical padding for a denser tab list.")
       .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.compactView).onChange(async (value) => {
-          this.plugin.settings.compactView = value;
-          await this.plugin.saveSettings();
-        })
+        toggle
+          .setValue(this.plugin.settings.compactView)
+          .onChange(async (value) => {
+            this.plugin.settings.compactView = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl).setName("Danger zone").setHeading();
@@ -99,7 +105,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const resetSetting = new Setting(containerEl)
       .setName("Reset tab layout")
       .setDesc(
-        "Deletes all manual groups and forgets the saved tab structure. Open tabs themselves are not closed."
+        "Deletes all manual groups and forgets the saved tab structure. Open tabs themselves are not closed.",
       );
 
     resetSetting.addButton((btn) => {
@@ -120,7 +126,9 @@ export class TabEngineSettingTab extends PluginSettingTab {
 
         this.plugin.settings.savedTreeState = { nodes: {}, rootIds: [] };
         await this.plugin.saveSettings();
-        useTabStore.getState().hydrateStore(this.plugin.settings.savedTreeState);
+        useTabStore
+          .getState()
+          .hydrateStore(this.plugin.settings.savedTreeState);
         this.plugin.syncNow(); // Re-append currently open leaves as fresh root tabs
         applyIdleLabel();
         new Notice("TabEngine: tab layout has been reset.");

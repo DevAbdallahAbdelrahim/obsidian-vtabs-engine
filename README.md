@@ -22,7 +22,7 @@ Organize open tabs and custom groups in a collapsible vertical tree structure wi
 
 <img width="847" height="910" alt="grouped-tabs-view" src="https://github.com/user-attachments/assets/ab785d39-02e7-4453-b349-4bfa841d9a66" />
 
------
+---
 
 ### 🎨 Custom Accent Colors & Icons
 
@@ -32,7 +32,7 @@ Assign distinct colors and Lucide icons to individual tab groups for fast visual
 
 <img width="1917" height="890" alt="color-picker-modal" src="https://github.com/user-attachments/assets/9f7d655d-3014-4146-85ed-0ce83f0bfea8" />
 
------
+---
 
 ### 🛠️ Inline Management Modals
 
@@ -42,7 +42,7 @@ Rename groups and manage workspace organization effortlessly via built-in modals
 
 <img width="1916" height="756" alt="rename-modal" src="https://github.com/user-attachments/assets/fd565463-a0b9-48d4-a72b-a9227b0fa26e" />
 
-----
+---
 
 ## ⚙️ Configuration & Settings
 
@@ -52,7 +52,7 @@ Fine-tune the sidebar interface directly from Obsidian's Plugin Settings tab. Cu
 
 <img width="1047" height="819" alt="settings-page" src="https://github.com/user-attachments/assets/9067f87a-db60-43a0-b507-a08af97dc5b1" />
 
------
+---
 
 ### ⚡ Additional Core Capabilities
 
@@ -125,10 +125,10 @@ tab-engine-obsidian/
 
 1. **Clone the repository:**
 
-   ```bash
-   git clone [https://github.com/username/obsidian-vtabs-engine.git](https://github.com/username/obsidian-vtabs-engine.git)
-   cd obsidian-vtabs-engine
-   ```
+```bash
+git clone https://github.com/DevAbdallahAbdelrahim/obsidian-vtabs-engine.git
+cd obsidian-vtabs-engine
+```
 
 2. **Install dependencies:**
 
@@ -142,9 +142,10 @@ tab-engine-obsidian/
    npm run build
    ```
 
-   This performs strict TypeScript type checking (`tsc --noEmit`) and bundles `main.js` via `esbuild`.
+This performs strict TypeScript type checking (`tsc --noEmit`) and bundles `main.js` via `esbuild`.
 
 4. **Watch mode for development:**
+
    ```bash
    npm run dev
    ```
@@ -153,10 +154,11 @@ tab-engine-obsidian/
 
 ## 📦 Manual Installation
 
-1. Create a directory named `vtabs-engine` in your Obsidian vault's plugin directory:
-   `<vault>/.obsidian/plugins/vtabs-engine/`
-2. Copy `main.js`, `manifest.json`, and `styles.css` into that directory.
-3. Reload Obsidian and enable **VTabs Engine** under **Community Plugins**.
+1. Create a directory named `obsidian-vtabs-engine` in your vault's plugin directory:
+   `<vault>/.obsidian/plugins/obsidian-vtabs-engine/`
+2. Download `main.js`, `manifest.json`, and `styles.css` from the latest release.
+3. Place these files directly into `<vault>/.obsidian/plugins/obsidian-vtabs-engine/`.
+4. Reload Obsidian and enable **VTabs Engine** in **Settings > Community Plugins**.
 
 ---
 
@@ -164,7 +166,7 @@ tab-engine-obsidian/
 
 VTab Engine is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
 
-AGPLv3 is GPLv3 plus one addition: GPLv3's copyleft obligation is triggered by *distributing* a copy of the software. That leaves a well-known gap — a company can take GPL code, modify it, run it only on their own servers, and offer it as a hosted service, and because they never hand anyone a literal copy of the binary, they're never obligated to share their modifications. AGPLv3 closes that gap: if you run a modified version of this code and let others interact with it over a network, you must also make that modified source available to those users (AGPLv3 §13).
+AGPLv3 is GPLv3 plus one addition: GPLv3's copyleft obligation is triggered by _distributing_ a copy of the software. That leaves a well-known gap — a company can take GPL code, modify it, run it only on their own servers, and offer it as a hosted service, and because they never hand anyone a literal copy of the binary, they're never obligated to share their modifications. AGPLv3 closes that gap: if you run a modified version of this code and let others interact with it over a network, you must also make that modified source available to those users (AGPLv3 §13).
 
 For an Obsidian plugin specifically, which runs locally on each user's own machine, that clause mostly sits dormant in ordinary use — installing and using TabEngine doesn't involve "interacting with someone else's server" in the sense the clause targets. Where it matters is the scenario it's there to prevent: if this code (or a fork of it) ever gets embedded into a hosted product — a cloud note-taking service, a managed Obsidian-as-a-service offering, anything users reach over a network — AGPLv3 guarantees those users get the same right to the source that a locally-installed copy already gives you. It's forward-looking protection against exactly one thing: someone else's SaaS wrapper closing off what was open.
 

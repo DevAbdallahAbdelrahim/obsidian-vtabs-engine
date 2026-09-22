@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { WorkspaceLeaf } from "obsidian";
+import { WorkspaceLeaf, Notice, ViewState } from "obsidian";
 import {
   CustomTreeNode,
   TabNode,
@@ -44,13 +44,30 @@ function safeGetViewType(leaf: WorkspaceLeaf): string {
   }
 }
 
+/**
+ * Extracts the backing file path from a leaf's view state, if it has one.
+ * Not every view type is file-backed (graph, search, etc. have none) — this
+ * returns null for those, which is exactly what excludes them from
+ * detached-survival: no stable filePath means nothing to match against
+ * when reconciling a reopened file, and nothing meaningful to restore from.
+ */
+export function getLeafFilePath(leaf: WorkspaceLeaf): string | null {
+  try {
+    const state = leaf.getViewState()?.state;
+    const file = state && typeof state === "object" ? (state as Record<string, unknown>).file : undefined;
+    return typeof file === "string" && file.length > 0 ? file : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Pure Helper — Remove a Node From Its Current Position ───────────────────
 // Accepts and returns plain state slices; never touches Zustand's set/get.
 // This keeps moveNode, removeTab, and deleteGroup DRY while staying immutable.
 function removeNodeFromParent(
   nodeId: string,
   nodes: Record<string, CustomTreeNode>,
-  rootIds: string[]
+  rootIds: string[],
 ): { nodes: Record<string, CustomTreeNode>; rootIds: string[] } {
   const node = nodes[nodeId];
   if (!node) return { nodes, rootIds };
@@ -129,7 +146,7 @@ export interface TabStoreState {
   moveNode: (
     nodeId: string,
     targetParentId: string | null,
-    targetIndex?: number
+    targetIndex?: number,
   ) => void;
 
   /** Toggles a group's isCollapsed state. */
@@ -152,6 +169,23 @@ export interface TabStoreState {
 
   /** Sets a CSS accent color override on any node. */
   setNodeColor: (id: string, color: string) => void;
+
+  /**
+   * Marks a tab as deliberately hidden: captures filePath/viewState, clears
+   * the live leaf, sets detached: true. Never touches parentId/childrenIds
+   * or removes the node — it stays exactly where it is in the tree. Only
+   * called by GroupSplitService.close(); an ordinary tab close still goes
+   * through syncLeaves()'s existing removal path untouched.
+   */
+  detachTab: (id: string, filePath: string, viewState: ViewState) => void;
+
+  /**
+   * Re-binds a detached tab to a freshly created leaf: sets the new
+   * leaf/leafId, refreshes title/viewType, clears detached/filePath/
+   * viewState. Used by GroupSplitService.open() when restoring, and by
+   * syncLeaves() when the user reopens a tracked file externally.
+   */
+  restoreTab: (id: string, leaf: WorkspaceLeaf) => void;
 
   // ── Runtime — no persistence trigger ─────────────────────────────────────
 
@@ -206,7 +240,7 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     if (warnings.length > 0) {
       console.warn(
         `[TabEngine] Tree integrity warnings on hydration (${warnings.length}):\n` +
-          warnings.map((w) => `  • ${w}`).join("\n")
+          warnings.map((w) => `  • ${w}`).join("\n"),
       );
     }
 
@@ -246,7 +280,10 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
 
         // Always update the leaf reference (ephemeral — no save needed for this alone).
         // Only flag as structurally changed when persisted fields differ.
-        if (existing.title !== freshTitle || existing.viewType !== freshViewType) {
+        if (
+          existing.title !== freshTitle ||
+          existing.viewType !== freshViewType
+        ) {
           structurallyChanged = true;
         }
 
@@ -258,29 +295,73 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
           viewType: freshViewType,
         };
       } else {
-        // ── New leaf: create a root-level TabNode ──────────────────────
-        const newId = generateId();
-        const newTab: TabNode = {
-          id: newId,
-          type: "tab",
-          title: safeGetLeafTitle(leaf),
-          leafId,
-          leaf,
-          viewType: safeGetViewType(leaf),
-          parentId: null,
-        };
-        newNodes[newId] = newTab;
-        newRootIds.push(newId);
-        leafIdToNodeId.set(leafId, newId);
-        structurallyChanged = true;
+        // ── New leaf: check for a detached tracked tab to re-bind first ──
+        // If the user reopened a file that's tracked-but-hidden in some
+        // group, this leaf belongs to that existing node, not a new root
+        // one — even though its leafId has never been seen before (the old
+        // leaf is gone; this is a fresh leaf for the same file).
+        const filePath = getLeafFilePath(leaf);
+        const detachedMatch = filePath
+          ? (Object.values(newNodes).find(
+              (n): n is TabNode =>
+                n.type === "tab" &&
+                (n as TabNode).detached === true &&
+                (n as TabNode).filePath === filePath,
+            ) as TabNode | undefined)
+          : undefined;
+
+        if (detachedMatch) {
+          const freshTitle = safeGetLeafTitle(leaf);
+          newNodes[detachedMatch.id] = {
+            ...detachedMatch,
+            leaf,
+            leafId,
+            title: freshTitle,
+            viewType: safeGetViewType(leaf),
+            detached: false,
+            filePath: undefined,
+            viewState: undefined,
+          };
+          leafIdToNodeId.delete(detachedMatch.leafId); // stale, now-dead leafId
+          leafIdToNodeId.set(leafId, detachedMatch.id);
+          structurallyChanged = true;
+
+          const parent =
+            detachedMatch.parentId !== null ? newNodes[detachedMatch.parentId] : null;
+          const groupName = parent?.type === "group" ? parent.title : "a group";
+          new Notice(`TabEngine: Opened "${freshTitle}", tracked in group "${groupName}".`);
+        } else {
+          // ── Genuinely new leaf: create a root-level TabNode ────────────
+          const newId = generateId();
+          const newTab: TabNode = {
+            id: newId,
+            type: "tab",
+            title: safeGetLeafTitle(leaf),
+            leafId,
+            leaf,
+            viewType: safeGetViewType(leaf),
+            parentId: null,
+          };
+          newNodes[newId] = newTab;
+          newRootIds.push(newId);
+          leafIdToNodeId.set(leafId, newId);
+          structurallyChanged = true;
+        }
       }
     }
 
     // ── Phase 3: Collect stale TabNodes (leaves that are no longer open) ──
     // Collect IDs first, then delete — avoids mid-iteration mutation.
+    // Detached nodes are deliberately excluded: their leafId is EXPECTED to
+    // be missing from openLeafIds (that's what "hidden by the Eye toggle"
+    // means) — that's not the same signal as "the user closed this tab".
     const toRemove: string[] = [];
     for (const [id, node] of Object.entries(newNodes)) {
-      if (node.type === "tab" && !openLeafIds.has((node as TabNode).leafId)) {
+      if (
+        node.type === "tab" &&
+        !(node as TabNode).detached &&
+        !openLeafIds.has((node as TabNode).leafId)
+      ) {
         toRemove.push(id);
       }
     }
@@ -332,7 +413,10 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     };
 
     // Start from a spread copy of nodes (Rule 3)
-    const newNodes: Record<string, CustomTreeNode> = { ...nodes, [id]: newGroup };
+    const newNodes: Record<string, CustomTreeNode> = {
+      ...nodes,
+      [id]: newGroup,
+    };
     const newRootIds = [...rootIds];
 
     if (parentId !== null && nodes[parentId]?.type === "group") {
@@ -522,6 +606,47 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     get()._triggerSave(); // Rule 1
   },
 
+  detachTab: (id, filePath, viewState) => {
+    const { nodes } = get();
+    const node = nodes[id];
+    if (!node || node.type !== "tab") return;
+    set({
+      nodes: {
+        ...nodes,
+        [id]: {
+          ...node,
+          leaf: undefined,
+          detached: true,
+          filePath,
+          viewState,
+        },
+      },
+    });
+    get()._triggerSave(); // Persisted: this IS what makes restore-after-restart possible.
+  },
+
+  restoreTab: (id, leaf) => {
+    const { nodes } = get();
+    const node = nodes[id];
+    if (!node || node.type !== "tab") return;
+    set({
+      nodes: {
+        ...nodes,
+        [id]: {
+          ...node,
+          leaf,
+          leafId: getLeafId(leaf),
+          title: safeGetLeafTitle(leaf),
+          viewType: safeGetViewType(leaf),
+          detached: false,
+          filePath: undefined,
+          viewState: undefined,
+        },
+      },
+    });
+    get()._triggerSave(); // Rule 1
+  },
+
   // ── Runtime Mutations (no save trigger) ───────────────────────────────────
 
   setActiveLeaf: (leafId) => set({ activeLeafId: leafId }),
@@ -567,7 +692,7 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
 /** Returns a group's childrenIds, or EMPTY_ARRAY if the node is missing/not a group. */
 export function selectChildrenIds(
   nodes: Record<string, CustomTreeNode>,
-  groupId: string
+  groupId: string,
 ): readonly string[] {
   const node = nodes[groupId];
   if (!node || node.type !== "group") return EMPTY_ARRAY;

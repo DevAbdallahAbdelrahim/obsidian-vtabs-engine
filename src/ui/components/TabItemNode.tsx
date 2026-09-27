@@ -9,6 +9,7 @@ import { getSiblingIds } from "../../utils/tree-utils";
 import { usePlugin, useSettings } from "../context/plugin-context";
 import { RenameModal } from "../../modals/rename-modal";
 import { GroupPickerModal } from "../../modals/group-picker-modal";
+import { SingleTabSplitButton } from "../../features/group-workspace-split";
 
 const DRAG_MIME = "text/tab-engine-node-id";
 
@@ -156,9 +157,7 @@ function TabItemNodeImpl({ node, depth }: TabItemNodeProps): React.ReactElement 
     >
       {settings.showTabIcons && <ObsidianIcon name={icon} />}
       <span className="tab-engine-item-title">{node.title}</span>
-      {node.detached && (
-        <ObsidianIcon name="eye-off" className="tab-engine-item-detached-indicator" />
-      )}
+      <SingleTabSplitButton nodeId={node.id} />
     </div>
   );
 }

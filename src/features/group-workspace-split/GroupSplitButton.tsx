@@ -11,6 +11,23 @@ interface GroupSplitButtonProps {
   className?: string;
 }
 
+/**
+ * "Focus View" trigger for a group header — toggles the group's tracked
+ * tabs between hidden and visible.
+ *
+ * This subscribes to the store now, which is a deliberate change from the
+ * original "zero store subscription" design: showing the correct eye/
+ * eye-off state means React has to know when it changes. What keeps this
+ * from reintroducing the re-render storm that design was avoiding is the
+ * SHAPE of the selector, not avoiding a subscription altogether —
+ * computeIsGroupOpen(s.nodes, groupId) runs on every store change (cheap:
+ * O(this group's own children), not O(whole tree)) but returns a plain
+ * boolean, so Zustand's default equality check skips re-rendering unless
+ * THIS group's own open/closed state actually flipped. A rename in some
+ * other group, a reorder, a color change — none of those change the
+ * returned boolean, so this button doesn't re-render for them.
+ * Hover/focus feedback is still 100% CSS, unaffected by any of this.
+ */
 function GroupSplitButtonImpl({
   groupId,
   className,
@@ -28,14 +45,17 @@ function GroupSplitButtonImpl({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      e.stopPropagation();
+      e.stopPropagation(); // MUST NOT toggle the group's collapse state
       void GroupSplitService.toggleGroupSplit(groupId, plugin);
     },
     [groupId, plugin],
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // إيقاف حدث السحب حتى يكتمل النقر بنجاح
+    // TabGroupNode's header has draggable=true; without this, Chromium can
+    // interpret a click here as a drag gesture starting instead, and the
+    // click never fires.
+    e.stopPropagation();
   }, []);
 
   return (

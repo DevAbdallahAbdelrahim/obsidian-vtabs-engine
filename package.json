@@ -1,28 +1,38 @@
 {
-  "name": "tab-engine-obsidian",
+  "name": "vtabs-engine",
   "version": "1.0.0",
-  "description": "Manual, nested vertical tab management plugin for Obsidian.",
+  "type": "module",
+  "description": "A lightning-fast, tree-structured vertical tab manager for Obsidian.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint ."
   },
   "keywords": [
     "obsidian",
     "obsidian-plugin",
-    "tabs"
+    "tabs",
+    "vertical-tabs"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Abdallah Abdelrahim",
+  "license": "AGPL-3.0",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.70.1",
+    "@typescript-eslint/parser": "^8.70.1",
     "builtin-modules": "^3.3.0",
-    "esbuild": "^0.19.11",
+    "esbuild": "^0.28.2",
+    "esbuild-sass-plugin": "^3.7.0",
+    "eslint": "^10.11.0",
+    "globals": "^15.15.0",
     "obsidian": "latest",
     "tslib": "2.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.70.1"
   },
   "dependencies": {
     "react": "^18.2.0",

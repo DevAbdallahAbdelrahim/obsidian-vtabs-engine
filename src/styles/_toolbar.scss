@@ -1,0 +1,62 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Toolbar Styles
+   شريط الأدوات العلوي: البحث، زر الإنشاء، وزر المسح.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-3);
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+}
+
+/* حقل مدخل البحث */
+.tab-engine-search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    min-width: 0;
+    background: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    padding: var(--size-4-1) var(--size-4-2);
+
+    .tab-engine-icon {
+        color: var(--text-faint);
+        flex-shrink: 0;
+    }
+
+    input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        font-size: var(--font-ui-small);
+        color: var(--text-normal);
+        outline: none;
+        box-shadow: none;
+    }
+}
+
+/* أزرار الإلغاء والمجموعة الجديدة */
+.tab-engine-search-clear,
+.tab-engine-new-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 2px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--text-normal);
+        background-color: var(--background-modifier-hover);
+    }
+}

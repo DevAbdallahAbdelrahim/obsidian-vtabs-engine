@@ -7,7 +7,11 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
   },
-  "keywords": ["obsidian", "obsidian-plugin", "tabs"],
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "tabs"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -24,5 +28,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^4.5.0"
+  },
+  "allowScripts": {
+    "esbuild@0.19.12": true
   }
 }

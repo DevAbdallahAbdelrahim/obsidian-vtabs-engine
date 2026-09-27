@@ -1,0 +1,44 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Action & Split Buttons (Eye Toggle Buttons)
+   أزرار التقسيم التابعة للتبويبات والمجموعات المتموقعة في أقصى اليمين.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-tab-split-btn,
+.tab-engine-group-split-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0.65;
+    transition:
+        opacity 0.1s ease-in-out,
+        background-color 0.1s ease-in-out;
+
+    &:hover {
+        opacity: 1;
+        background-color: var(--background-modifier-hover);
+        color: var(--text-normal);
+    }
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.tab-engine-group-split-btn {
+    display: none;
+}
+
+.tab-engine-group-header:hover .tab-engine-group-split-btn {
+    display: flex;
+}

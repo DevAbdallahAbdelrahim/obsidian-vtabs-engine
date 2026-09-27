@@ -299,3 +299,122 @@
     opacity: 0.35;
     cursor: default;
 }
+/* ── Tab row: title truncates, eye button pins to the far right ───────── */
+.tab-engine-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tab-engine-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Eye toggle buttons: transparent, borderless, native icon sizing ──── */
+.tab-engine-tab-split-btn,
+.tab-engine-group-split-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0.65;
+    transition:
+        opacity 0.1s ease-in-out,
+        background-color 0.1s ease-in-out;
+}
+
+.tab-engine-tab-split-btn:hover,
+.tab-engine-group-split-btn:hover {
+    opacity: 1;
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.tab-engine-tab-split-btn svg,
+.tab-engine-group-split-btn svg {
+    width: 14px;
+    height: 14px;
+}
+/*
+ * TabEngine — add these rules to your existing styles.css.
+ * This is a standalone addition, not a full stylesheet: it targets only
+ * the tab-row layout and the two eye-toggle buttons. It doesn't replace or
+ * duplicate anything else already in your file.
+ *
+ * Note: both buttons already carry Obsidian's own `clickable-icon` class
+ * alongside the custom one, which normally covers a lot of this on its
+ * own. The explicit resets below are there so the correct appearance
+ * doesn't depend on whatever `clickable-icon` does or doesn't already
+ * handle for an actual <button> element (vs. the <div>/<span> it's more
+ * commonly applied to in Obsidian's own UI) — they're redundant in the
+ * best case, and load-bearing in the case that's actually failing.
+ */
+
+/* ── Tab row: title truncates, eye button pins to the far right ───────── */
+.tab-engine-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tab-engine-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Required alongside text-overflow: ellipsis — without it, a long title
+     wraps or overflows instead of truncating with "…". */
+    white-space: nowrap;
+}
+
+/* ── Eye toggle buttons: transparent, borderless, native icon sizing ──── */
+.tab-engine-tab-split-btn,
+.tab-engine-group-split-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0.65;
+    transition:
+        opacity 0.1s ease-in-out,
+        background-color 0.1s ease-in-out;
+}
+
+.tab-engine-tab-split-btn:hover,
+.tab-engine-group-split-btn:hover {
+    opacity: 1;
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.tab-engine-tab-split-btn svg,
+.tab-engine-group-split-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* GroupSplitButton sits inside TabGroupNode's header, which is its own
+   flex row alongside the chevron/icon/title/count — margin-left: auto
+   still pins it to the end of that row without affecting TabItemNode. */

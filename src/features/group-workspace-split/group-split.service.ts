@@ -1,6 +1,12 @@
-import { App, Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { App, Notice, WorkspaceLeaf, TFile } from "obsidian";
+import type TabEnginePlugin from "../../main";
 import { useTabStore, getLeafFilePath } from "../../store/tab-store";
-import { CustomTreeNode, TabNode, isGroupNode, isTabNode } from "../../types/tree";
+import {
+  CustomTreeNode,
+  TabNode,
+  isGroupNode,
+  isTabNode,
+} from "../../types/tree";
 import {
   SplitOptions,
   AttachedTabEntry,
@@ -15,42 +21,32 @@ const DEFAULT_OPTIONS: Required<SplitOptions> = {
   focusFirstLeaf: true,
 };
 
-/**
- * GroupSplitService — "Focus View" toggle for a manual group's tabs.
- *
- * There are no ephemeral or duplicate leaves in this design — every leaf
- * this service ever touches is a tab's own real, permanent leaf. Hiding a
- * tab (close()) detaches its actual leaf and hands its filePath/viewState
- * to tab-store's detachTab(), which keeps the TabNode in the tree with
- * detached: true rather than deleting it. Showing it again (open())
- * creates a fresh leaf from that saved state and hands it to tab-store's
- * restoreTab(), which re-binds it to the SAME TabNode. Open/closed state
- * isn't tracked here at all — it's just whatever tab-store's nodes already
- * say (child.leaf present = live), so there's nothing to keep in sync.
- *
- * A group's live tabs can be scattered anywhere the user put them — there's
- * no more dedicated "the split" they all live in until they're hidden — so
- * closing a group can touch more than one pane; container cleanup runs once
- * per distinct pane actually touched, not once overall.
- *
- * Views with no backing file (graph, search, etc.) can't be tracked or
- * restored, so they're excluded from the open/closed decision entirely and
- * left untouched by close() — otherwise a group containing even one such
- * tab would permanently read as "open" and could never be restored via the
- * toggle again.
- */
+export function computeIsGroupOpen(
+  nodes: Record<string, CustomTreeNode>,
+  groupId: string,
+): boolean {
+  const group = nodes[groupId];
+  if (!group || !isGroupNode(group)) return false;
+
+  const childrenIds = Array.isArray(group.childrenIds) ? group.childrenIds : [];
+  for (const childId of childrenIds) {
+    const child = nodes[childId];
+    if (child?.type === "tab" && child.leaf && getLeafFilePath(child.leaf)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export class GroupSplitService {
-  /**
-   * Re-entrancy guard only — prevents a second toggle for the SAME groupId
-   * from starting while that group's own open()/close() is still running.
-   */
   private static pendingGroupIds = new Set<string>();
+  private static managedContainers = new WeakSet<WorkspaceLeaf["parent"]>();
 
   // ── Public API ────────────────────────────────────────────────────────────
 
   static async toggleGroupSplit(
     groupId: string,
-    plugin: Plugin,
+    plugin: TabEnginePlugin,
     options?: SplitOptions,
   ): Promise<ToggleGroupSplitOutcome> {
     if (GroupSplitService.pendingGroupIds.has(groupId)) {
@@ -73,31 +69,64 @@ export class GroupSplitService {
   }
 
   /**
-   * True if at least one of groupId's direct child tabs is a file-backed
-   * view that's currently live. Read straight from tab-store — no
-   * workspace scan needed, since child.leaf IS the live/hidden signal,
-   * kept current by syncLeaves() on every layout-change. Non-file-backed
-   * children are deliberately excluded (see class docs) so they can never
-   * pin a group's toggle permanently "open".
+   * ميزة جديدة: التبديل وإظهار/إخفاء تاب منفرد
    */
-  static isGroupOpen(groupId: string): boolean {
-    const { nodes } = useTabStore.getState();
-    const group = nodes[groupId];
-    if (!group || !isGroupNode(group)) return false;
+  static async toggleSingleTab(
+    nodeId: string,
+    plugin: TabEnginePlugin,
+  ): Promise<void> {
+    const { nodes, detachTab, restoreTab } = useTabStore.getState();
+    const node = nodes[nodeId];
+    if (!node || !isTabNode(node)) return;
 
-    const childrenIds = Array.isArray(group.childrenIds) ? group.childrenIds : [];
-    for (const childId of childrenIds) {
-      const child = nodes[childId];
-      if (child?.type === "tab" && child.leaf && getLeafFilePath(child.leaf)) {
-        return true;
+    if (node.leaf && !node.detached) {
+      // إخفاء التاب المفرد
+      const filePath = getLeafFilePath(node.leaf) ?? node.filePath;
+      if (!filePath) return;
+      const container = node.leaf.parent;
+      const viewState = node.leaf.getViewState();
+
+      detachTab(node.id, filePath, viewState);
+      node.leaf.detach();
+
+      if (plugin.settings.autoCollapseManagedSplits && container) {
+        const remaining: WorkspaceLeaf[] = [];
+        plugin.app.workspace.iterateAllLeaves((l: WorkspaceLeaf) => {
+          if (l.parent === container) remaining.push(l);
+        });
+        if (
+          remaining.length === 1 &&
+          remaining[0].getViewState().type === "empty"
+        ) {
+          remaining[0].detach();
+        }
+      }
+    } else if (node.filePath) {
+      // إعادة إظهار التاب المفرد
+      const leaf = plugin.app.workspace.getLeaf("tab");
+      const file = plugin.app.vault.getAbstractFileByPath(node.filePath);
+      if (file && file instanceof TFile) {
+        await leaf.openFile(file);
+        if (node.viewState) {
+          await leaf.setViewState(node.viewState);
+        }
+        restoreTab(node.id, leaf);
+        plugin.app.workspace.setActiveLeaf(leaf, { focus: true });
       }
     }
-    return false;
+  }
+
+  static isGroupOpen(groupId: string): boolean {
+    const { nodes } = useTabStore.getState();
+    return computeIsGroupOpen(nodes, groupId);
   }
 
   // ── Close ─────────────────────────────────────────────────────────────────
 
-  private static close(groupId: string, plugin: Plugin): ToggleGroupSplitOutcome {
+  private static close(
+    groupId: string,
+    plugin: TabEnginePlugin,
+  ): ToggleGroupSplitOutcome {
     const { nodes } = useTabStore.getState();
     const group = nodes[groupId];
     if (!group || !isGroupNode(group)) {
@@ -106,28 +135,45 @@ export class GroupSplitService {
     }
 
     const attached = GroupSplitService.collectAttached(nodes, groupId);
-    if (attached.length === 0) return "closed"; // defensive — see isGroupOpen's guarantee
+    if (attached.length === 0) return "closed";
+
+    const containersInvolved = new Set<WorkspaceLeaf["parent"]>();
+    for (const entry of attached) containersInvolved.add(entry.leaf.parent);
+    const totalPerContainer = new Map<WorkspaceLeaf["parent"], number>();
+    plugin.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
+      if (containersInvolved.has(leaf.parent)) {
+        totalPerContainer.set(
+          leaf.parent,
+          (totalPerContainer.get(leaf.parent) ?? 0) + 1,
+        );
+      }
+    });
 
     const outcomes: TabActionOutcome[] = [];
-    const containersTouched = new Set<WorkspaceLeaf["parent"]>();
+    const removedPerContainer = new Map<WorkspaceLeaf["parent"], number>();
     let skippedNoFile = 0;
 
     for (const entry of attached) {
       const filePath = getLeafFilePath(entry.leaf);
       if (!filePath) {
-        // No stable file identity to restore from later — leave this one
-        // live rather than lose track of it. Never detach what we can't
-        // safely bring back.
         skippedNoFile++;
         continue;
       }
 
+      const container = entry.leaf.parent;
       try {
         const viewState = entry.leaf.getViewState();
-        containersTouched.add(entry.leaf.parent);
         useTabStore.getState().detachTab(entry.nodeId, filePath, viewState);
         entry.leaf.detach();
-        outcomes.push({ nodeId: entry.nodeId, title: entry.title, success: true });
+        removedPerContainer.set(
+          container,
+          (removedPerContainer.get(container) ?? 0) + 1,
+        );
+        outcomes.push({
+          nodeId: entry.nodeId,
+          title: entry.title,
+          success: true,
+        });
       } catch (err) {
         outcomes.push({
           nodeId: entry.nodeId,
@@ -138,33 +184,43 @@ export class GroupSplitService {
       }
     }
 
-    GroupSplitService.cleanupOrphanedContainers(plugin, containersTouched);
-    GroupSplitService.reportOutcome("closed", group.title, outcomes, skippedNoFile);
+    GroupSplitService.cleanupContainers(
+      plugin,
+      totalPerContainer,
+      removedPerContainer,
+    );
+    GroupSplitService.reportOutcome(
+      "closed",
+      group.title,
+      outcomes,
+      skippedNoFile,
+    );
     return "closed";
   }
 
-  /**
-   * Obsidian won't leave a pane region with zero leaves in it — the instant
-   * the last leaf in a container is detached, it fills the gap with a
-   * fresh leaf of its own (typically the empty/"Home" view). Any leaf found
-   * in a container we JUST vacated, right after our own detach, can only be
-   * that filler — nothing else could have legitimately landed there in the
-   * same synchronous call. Repeats per container (capped) in case filling
-   * the gap itself cascades.
-   */
-  private static cleanupOrphanedContainers(
-    plugin: Plugin,
-    containers: Set<WorkspaceLeaf["parent"]>,
+  private static cleanupContainers(
+    plugin: TabEnginePlugin,
+    totalPerContainer: Map<WorkspaceLeaf["parent"], number>,
+    removedPerContainer: Map<WorkspaceLeaf["parent"], number>,
   ): void {
     const MAX_FILLER_ROUNDS = 4;
-    for (const container of containers) {
+    const autoCollapseManaged =
+      plugin.settings.autoCollapseManagedSplits === true;
+
+    for (const [container, total] of totalPerContainer) {
+      const removed = removedPerContainer.get(container) ?? 0;
+      const provenVacated = removed === total;
+      const isManaged = GroupSplitService.managedContainers.has(container);
+
+      if (!provenVacated && !(isManaged && autoCollapseManaged)) continue;
+
       for (let round = 0; round < MAX_FILLER_ROUNDS; round++) {
-        const filler: WorkspaceLeaf[] = [];
-        plugin.app.workspace.iterateAllLeaves((leaf) => {
-          if (leaf.parent === container) filler.push(leaf);
+        const remaining: WorkspaceLeaf[] = [];
+        plugin.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
+          if (leaf.parent === container) remaining.push(leaf);
         });
-        if (filler.length === 0) break;
-        for (const leaf of filler) leaf.detach();
+        if (remaining.length === 0) break;
+        for (const leaf of remaining) leaf.detach();
       }
     }
   }
@@ -173,7 +229,7 @@ export class GroupSplitService {
 
   private static async open(
     groupId: string,
-    plugin: Plugin,
+    plugin: TabEnginePlugin,
     opts: Required<SplitOptions>,
   ): Promise<ToggleGroupSplitOutcome> {
     const { nodes } = useTabStore.getState();
@@ -190,12 +246,14 @@ export class GroupSplitService {
       return "empty";
     }
 
-    const outcomes = await GroupSplitService.populateSplit(plugin.app, detached, opts);
+    const outcomes = await GroupSplitService.populateSplit(
+      plugin.app,
+      detached,
+      opts,
+    );
     GroupSplitService.reportOutcome("opened", group.title, outcomes, 0);
     return "opened";
   }
-
-  // ── Collection (pure, store-read-only) ─────────────────────────────────────
 
   private static collectAttached(
     nodes: Record<string, CustomTreeNode>,
@@ -205,12 +263,18 @@ export class GroupSplitService {
     const group = nodes[groupId];
     if (!group || !isGroupNode(group)) return entries;
 
-    const childrenIds = Array.isArray(group.childrenIds) ? group.childrenIds : [];
+    const childrenIds = Array.isArray(group.childrenIds)
+      ? group.childrenIds
+      : [];
     for (const childId of childrenIds) {
       const child = nodes[childId];
       if (!child || !isTabNode(child)) continue;
       if (child.leaf) {
-        entries.push({ nodeId: child.id, title: child.title, leaf: child.leaf });
+        entries.push({
+          nodeId: child.id,
+          title: child.title,
+          leaf: child.leaf,
+        });
       }
     }
     return entries;
@@ -224,7 +288,9 @@ export class GroupSplitService {
     const group = nodes[groupId];
     if (!group || !isGroupNode(group)) return entries;
 
-    const childrenIds = Array.isArray(group.childrenIds) ? group.childrenIds : [];
+    const childrenIds = Array.isArray(group.childrenIds)
+      ? group.childrenIds
+      : [];
     for (const childId of childrenIds) {
       const child = nodes[childId] as TabNode | undefined;
       if (!child || !isTabNode(child)) continue;
@@ -240,20 +306,6 @@ export class GroupSplitService {
     return entries;
   }
 
-  // ── Population ─────────────────────────────────────────────────────────────
-
-  /**
-   * Restores a batch of detached tabs into one new split. The first
-   * successful leaf opens the split (createLeafBySplit); every one after
-   * it is stacked into that SAME split via duplicateLeaf(hostLeaf, "tab") —
-   * still the only reliable way to place a new leaf into a specific
-   * existing tab group, since createLeafInParent needs a WorkspaceSplit and
-   * a leaf's parent is always a WorkspaceTabs. What's different from the
-   * old ephemeral design: the leaf duplicateLeaf() produces here isn't a
-   * disposable copy sitting alongside a live original — restoreTab()
-   * immediately adopts it as that TabNode's own real, permanent leaf, so
-   * there's nothing ephemeral left to tag or track separately.
-   */
   private static async populateSplit(
     app: App,
     detached: DetachedTabEntry[],
@@ -266,6 +318,7 @@ export class GroupSplitService {
       app.workspace.getMostRecentLeaf() ?? app.workspace.getLeaf(false);
 
     for (const entry of detached) {
+      const isNewSplit = hostLeaf === null;
       const targetLeaf: WorkspaceLeaf = hostLeaf
         ? await app.workspace.duplicateLeaf(hostLeaf, "tab")
         : app.workspace.createLeafBySplit(
@@ -274,11 +327,19 @@ export class GroupSplitService {
             opts.before,
           );
 
+      if (isNewSplit) {
+        GroupSplitService.managedContainers.add(targetLeaf.parent);
+      }
+
       try {
         await targetLeaf.setViewState(entry.viewState);
         useTabStore.getState().restoreTab(entry.nodeId, targetLeaf);
 
-        outcomes.push({ nodeId: entry.nodeId, title: entry.title, success: true });
+        outcomes.push({
+          nodeId: entry.nodeId,
+          title: entry.title,
+          success: true,
+        });
         if (!hostLeaf) hostLeaf = targetLeaf;
       } catch (err) {
         targetLeaf.detach();
@@ -298,8 +359,6 @@ export class GroupSplitService {
     return outcomes;
   }
 
-  // ── Reporting ───────────────────────────────────────────────────────────────
-
   private static reportOutcome(
     action: "opened" | "closed",
     groupTitle: string,
@@ -316,7 +375,9 @@ export class GroupSplitService {
 
     const parts: string[] = [];
     if (failures.length > 0) {
-      parts.push(`${failures.length} of ${outcomes.length + skippedNoFile} tab(s) failed`);
+      parts.push(
+        `${failures.length} of ${outcomes.length + skippedNoFile} tab(s) failed`,
+      );
     }
     if (skippedNoFile > 0) {
       parts.push(`${skippedNoFile} tab(s) left open (nothing to track)`);

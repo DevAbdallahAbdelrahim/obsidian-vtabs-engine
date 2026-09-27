@@ -1,0 +1,37 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Zoom & Compact Modes
+   أزرار التكبير/التصغير والوضع المدمج للتبويبات (Compact Mode).
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tab-engine-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: var(--radius-s);
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+}
+
+/* التنسيق عند تفعيل الوضع المدمج Compact View */
+.tab-engine-panel.is-compact {
+    .tab-engine-item,
+    .tab-engine-group-header {
+        padding-top: 1px;
+        padding-bottom: 1px;
+    }
+
+    .tab-engine-icon {
+        width: 14px;
+        height: 14px;
+    }
+}

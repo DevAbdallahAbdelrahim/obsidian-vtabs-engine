@@ -219,7 +219,9 @@ function TabGroupNodeImpl({
         </span>
         <ObsidianIcon name={icon} />
         <span className="tab-engine-group-title">{node.title}</span>
-        <span className="tab-engine-group-count">{childrenIds.length}</span>
+        {settings.showGroupTabCount && (
+          <span className="tab-engine-group-count">{childrenIds.length}</span>
+        )}
         <GroupSplitButton groupId={node.id} />
       </div>
 

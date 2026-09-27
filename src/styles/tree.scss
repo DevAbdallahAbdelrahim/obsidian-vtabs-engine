@@ -1,0 +1,31 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Tree Root & Empty State
+   جسم الشجرة والتصميم الخاص بالحالة التي لا تحتوي على تبويبات المفتوحة.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-tree-root {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--size-4-1) 0;
+}
+
+/* رسالة القائمة الفارغة */
+.tab-engine-empty-state {
+    padding: var(--size-4-6) var(--size-4-4);
+    text-align: center;
+    color: var(--text-muted);
+
+    p {
+        margin: 0 0 var(--size-4-1) 0;
+    }
+}
+
+.tab-engine-empty-hint {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+}
+
+.tab-engine-group-children {
+    display: flex;
+    flex-direction: column;
+}

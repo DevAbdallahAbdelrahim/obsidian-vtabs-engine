@@ -1,0 +1,71 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Items & Group Headers
+   تنسيق عناصر التبويبات والمجموعات وشريط السحب والإفلات والتحديد النشط.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-item,
+.tab-engine-group-header {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding-top: var(--tab-engine-item-padding-v);
+    padding-bottom: var(--tab-engine-item-padding-v);
+    padding-right: var(--tab-engine-item-padding-h);
+    margin: 0 var(--size-4-1);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    transition:
+        background-color 0.1s ease-in-out,
+        outline-color 0.1s ease-in-out;
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+
+    &:hover {
+        background-color: var(--background-modifier-hover);
+    }
+
+    /* تأثيرات السحب والإفلات Drag & Drop */
+    &.is-drag-over {
+        outline-color: var(--interactive-accent);
+        background-color: var(--background-modifier-hover);
+    }
+}
+
+/* التبويب النشط حالياً */
+.tab-engine-item.is-active {
+    background-color: var(--background-modifier-active-hover);
+    color: var(--text-normal);
+    font-weight: 500;
+}
+
+/* نصوص العناوين مع قطع النص الزائد */
+.tab-engine-item-title,
+.tab-engine-group-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tab-engine-font-size);
+}
+
+/* تخصيصات المجموعات */
+.tab-engine-group-header {
+    font-weight: 500;
+    border-left: 3px solid var(--tab-engine-accent, transparent);
+
+    & > .tab-engine-icon {
+        color: var(--tab-engine-accent, var(--text-muted));
+    }
+}
+
+.tab-engine-group-count {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    flex-shrink: 0;
+    min-width: 1.2em;
+    text-align: right;
+}

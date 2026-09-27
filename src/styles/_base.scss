@@ -1,0 +1,31 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Base Layout & CSS Variables
+   تحديد الحاوية الرئيسية ولوحة التحكم والمتغيرات الخاصة بمدى التكبير.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.tab-engine-view-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-engine-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+
+    /* متغيرات الحجم المقاسة ديناميكياً بناءً على نسبة التكبير */
+    --tab-engine-font-size: calc(
+        var(--font-ui-small) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-icon-size: calc(
+        var(--icon-s, 16px) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-item-padding-v: calc(
+        var(--size-4-1) * var(--tab-engine-zoom-scale, 1)
+    );
+    --tab-engine-item-padding-h: calc(
+        var(--size-4-2) * var(--tab-engine-zoom-scale, 1)
+    );
+}

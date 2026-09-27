@@ -4,24 +4,29 @@ import { setTooltip } from "obsidian";
 import { usePlugin } from "../../ui/context/plugin-context";
 import { ObsidianIcon } from "../../ui/components/ObsidianIcon";
 import { useTabStore } from "../../store/tab-store";
-import { GroupSplitService, computeIsGroupOpen } from "./group-split.service";
+import { GroupSplitService } from "./group-split.service";
+import { TabNode } from "../../types/tree";
 
-interface GroupSplitButtonProps {
-  groupId: string;
+interface SingleTabSplitButtonProps {
+  nodeId: string;
   className?: string;
 }
 
-function GroupSplitButtonImpl({
-  groupId,
+function SingleTabSplitButtonImpl({
+  nodeId,
   className,
-}: GroupSplitButtonProps): React.ReactElement {
+}: SingleTabSplitButtonProps): React.ReactElement | null {
   const plugin = usePlugin();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const isOpen = useTabStore((s) => computeIsGroupOpen(s.nodes, groupId));
+  const tabNode = useTabStore((s) => s.nodes[nodeId] as TabNode | undefined);
+
+  if (!tabNode || tabNode.type !== "tab") return null;
+
+  const isOpen = Boolean(tabNode.leaf && !tabNode.detached);
 
   useEffect(() => {
     if (buttonRef.current) {
-      setTooltip(buttonRef.current, isOpen ? "Hide group" : "Show group");
+      setTooltip(buttonRef.current, isOpen ? "Hide tab" : "Restore tab");
     }
   }, [isOpen]);
 
@@ -29,21 +34,21 @@ function GroupSplitButtonImpl({
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      void GroupSplitService.toggleGroupSplit(groupId, plugin);
+      void GroupSplitService.toggleSingleTab(nodeId, plugin);
     },
-    [groupId, plugin],
+    [nodeId, plugin],
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // إيقاف حدث السحب حتى يكتمل النقر بنجاح
+    e.stopPropagation(); // منع تعارض Drag and Drop
   }, []);
 
   return (
     <button
       ref={buttonRef}
       type="button"
-      className={`tab-engine-group-split-btn clickable-icon ${className ?? ""}`.trim()}
-      aria-label={isOpen ? "Hide group" : "Show group"}
+      className={`tab-engine-tab-split-btn clickable-icon ${className ?? ""}`.trim()}
+      aria-label={isOpen ? "Hide tab" : "Restore tab"}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
     >
@@ -52,4 +57,4 @@ function GroupSplitButtonImpl({
   );
 }
 
-export const GroupSplitButton = React.memo(GroupSplitButtonImpl);
+export const SingleTabSplitButton = React.memo(SingleTabSplitButtonImpl);

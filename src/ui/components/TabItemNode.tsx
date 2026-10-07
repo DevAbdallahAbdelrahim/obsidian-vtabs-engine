@@ -153,7 +153,7 @@ function TabItemNodeImpl({ node, depth }: TabItemNodeProps): React.ReactElement 
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      title={node.detached ? `${node.title} (hidden — toggle its group to restore)` : node.title}
+      title={node.detached ? `${node.title} (hidden — click the eye to restore)` : node.title}
     >
       {settings.showTabIcons && <ObsidianIcon name={icon} />}
       <span className="tab-engine-item-title">{node.title}</span>

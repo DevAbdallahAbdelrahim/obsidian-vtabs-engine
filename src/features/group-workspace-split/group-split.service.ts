@@ -1,6 +1,7 @@
 import { App, Notice, WorkspaceLeaf } from "obsidian";
 import type TabEnginePlugin from "../../main";
 import { useTabStore, getLeafFilePath } from "../../store/tab-store";
+import { safeDetach, safeSetActiveLeaf } from "../../utils/focus-guards";
 import {
   CustomTreeNode,
   TabNode,
@@ -170,7 +171,7 @@ export class GroupSplitService {
 
         const viewState = leaf.getViewState();
         useTabStore.getState().detachTab(nodeId, filePath, viewState);
-        leaf.detach();
+        safeDetach(leaf);
 
         await GroupSplitService.cleanupFillerLeaves(plugin, leavesBefore);
         new Notice(`TabEngine: hid "${node.title}".`);
@@ -191,10 +192,10 @@ export class GroupSplitService {
         try {
           await targetLeaf.setViewState(node.viewState);
           useTabStore.getState().restoreTab(nodeId, targetLeaf);
-          plugin.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+          safeSetActiveLeaf(plugin.app, targetLeaf, { focus: true });
           new Notice(`TabEngine: restored "${node.title}".`);
         } catch (err) {
-          targetLeaf.detach();
+          safeDetach(targetLeaf);
           new Notice(`TabEngine: couldn't restore "${node.title}".`);
           console.warn("[TabEngine] toggleSingleTab restore failure:", err);
         }
@@ -252,7 +253,7 @@ export class GroupSplitService {
         const viewState = entry.leaf.getViewState();
         containersTouched.add(entry.leaf.parent);
         useTabStore.getState().detachTab(entry.nodeId, filePath, viewState);
-        entry.leaf.detach();
+        safeDetach(entry.leaf);
         outcomes.push({
           nodeId: entry.nodeId,
           title: entry.title,
@@ -345,7 +346,7 @@ export class GroupSplitService {
         if (GroupSplitService.isEmptyViewLeaf(leaf)) filler.push(leaf);
       });
       if (filler.length === 0) break;
-      for (const leaf of filler) leaf.detach();
+      for (const leaf of filler) safeDetach(leaf);
     }
   }
 
@@ -397,7 +398,7 @@ export class GroupSplitService {
       try {
         const viewState = soleLeaf.getViewState();
         useTabStore.getState().detachTab(match.id, filePath, viewState);
-        soleLeaf.detach();
+        safeDetach(soleLeaf);
         // This tab's own detach can trigger a fresh round of Obsidian
         // filler in the same container — clean that up too.
         await GroupSplitService.cleanupFillerLeaves(plugin, leavesBefore);
@@ -432,7 +433,7 @@ export class GroupSplitService {
           if (leaf.parent === container) remaining.push(leaf);
         });
         if (remaining.length === 0) break;
-        for (const leaf of remaining) leaf.detach();
+        for (const leaf of remaining) safeDetach(leaf);
       }
     }
   }
@@ -570,7 +571,7 @@ export class GroupSplitService {
         });
         if (!hostLeaf) hostLeaf = targetLeaf;
       } catch (err) {
-        targetLeaf.detach();
+        safeDetach(targetLeaf);
         outcomes.push({
           nodeId: entry.nodeId,
           title: entry.title,
@@ -581,7 +582,7 @@ export class GroupSplitService {
     }
 
     if (hostLeaf && opts.focusFirstLeaf) {
-      app.workspace.setActiveLeaf(hostLeaf, { focus: true });
+      safeSetActiveLeaf(app, hostLeaf, { focus: true });
     }
 
     return outcomes;

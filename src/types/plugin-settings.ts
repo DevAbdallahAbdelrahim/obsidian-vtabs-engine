@@ -3,6 +3,9 @@ import { SerializedTreeState } from "./tree";
 // ─── Settings Interface ───────────────────────────────────────────────────────
 
 export interface PluginSettings {
+  /** Automatically remove duplicate tabs for the same file. */
+  autoDeduplicateTabs: boolean;
+
   /** Controls the ribbon (sidebar) icon appearance. */
   ribbonIconStyle: "brand" | "native" | "none";
 
@@ -66,6 +69,7 @@ export interface PluginSettings {
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS: Readonly<PluginSettings> = {
+  autoDeduplicateTabs: true,
   ribbonIconStyle: "brand",
   showTabIcons: true,
   showGroupTabCount: true,

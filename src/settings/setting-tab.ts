@@ -104,6 +104,20 @@ export class TabEngineSettingTab extends PluginSettingTab {
         })
       );
 
+    new Setting(containerEl).setName("Tab behavior").setHeading();
+
+    new Setting(containerEl)
+      .setName("Auto-deduplicate tabs")
+      .setDesc(
+        "Close extra tabs that show the same file, keeping the one you're using (or a pinned one). Tabs inside groups are never closed this way. Takes effect the next time your layout changes."
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.autoDeduplicateTabs).onChange(async (value) => {
+          this.plugin.settings.autoDeduplicateTabs = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
     new Setting(containerEl).setName("Focus View").setHeading();
 
     new Setting(containerEl)
@@ -123,7 +137,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Auto-collapse standalone splits")
       .setDesc(
-        "Automatically close split panes containing only ungrouped or isolated tabs during Focus View. (Not yet active — ungrouped tabs have no restore tracking yet, so this is reserved until that's built.)"
+        "Automatically close split panes containing only ungrouped or isolated tabs during Focus View. Closed tabs stay in the panel and can be restored."
       )
       .addToggle((toggle) =>
         toggle

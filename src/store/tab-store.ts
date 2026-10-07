@@ -54,7 +54,10 @@ function safeGetViewType(leaf: WorkspaceLeaf): string {
 export function getLeafFilePath(leaf: WorkspaceLeaf): string | null {
   try {
     const state = leaf.getViewState()?.state;
-    const file = state && typeof state === "object" ? (state as Record<string, unknown>).file : undefined;
+    const file =
+      state && typeof state === "object"
+        ? (state as Record<string, unknown>).file
+        : undefined;
     return typeof file === "string" && file.length > 0 ? file : null;
   } catch {
     return null;
@@ -240,7 +243,7 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     if (warnings.length > 0) {
       console.warn(
         `[TabEngine] Tree integrity warnings on hydration (${warnings.length}):\n` +
-          warnings.map((w) => `  • ${w}`).join("\n"),
+          warnings.map((w: string) => `  • ${w}`).join("\n"),
       );
     }
 
@@ -327,9 +330,14 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
           structurallyChanged = true;
 
           const parent =
-            detachedMatch.parentId !== null ? newNodes[detachedMatch.parentId] : null;
-          const groupName = parent?.type === "group" ? parent.title : "a group";
-          new Notice(`TabEngine: Opened "${freshTitle}", tracked in group "${groupName}".`);
+            detachedMatch.parentId !== null
+              ? newNodes[detachedMatch.parentId]
+              : null;
+          new Notice(
+            parent?.type === "group"
+              ? `TabEngine: Opened "${freshTitle}", tracked in group "${parent.title}".`
+              : `TabEngine: Opened "${freshTitle}", restored to its tracked tab.`,
+          );
         } else {
           // ── Genuinely new leaf: create a root-level TabNode ────────────
           const newId = generateId();

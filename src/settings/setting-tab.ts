@@ -17,7 +17,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl).setName("TabEngine settings").setHeading();
+    new Setting(containerEl).setName("TabEngine").setHeading();
 
     new Setting(containerEl)
       .setName("Ribbon icon style")

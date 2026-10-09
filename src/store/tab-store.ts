@@ -14,13 +14,10 @@ import {
 } from "../utils/persistence";
 
 // ─── Reference-Stable Empty Fallbacks ────────────────────────────────────────
-// Module-scoped constants prevent selector-driven infinite re-renders.
-// Selectors that could return [] MUST use these instead of creating new arrays.
 export const EMPTY_ARRAY: readonly string[] = Object.freeze([]);
 export const EMPTY_NODES: Readonly<Record<string, never>> = Object.freeze({});
 
 // ─── WorkspaceLeaf Accessors ──────────────────────────────────────────────────
-// Obsidian's `leaf.id` is not officially typed; access it via intersection cast.
 type LeafWithId = WorkspaceLeaf & { id: string };
 
 function getLeafId(leaf: WorkspaceLeaf): string {
@@ -44,13 +41,6 @@ function safeGetViewType(leaf: WorkspaceLeaf): string {
   }
 }
 
-/**
- * Extracts the backing file path from a leaf's view state, if it has one.
- * Not every view type is file-backed (graph, search, etc. have none) — this
- * returns null for those, which is exactly what excludes them from
- * detached-survival: no stable filePath means nothing to match against
- * when reconciling a reopened file, and nothing meaningful to restore from.
- */
 export function getLeafFilePath(leaf: WorkspaceLeaf): string | null {
   try {
     const state = leaf.getViewState()?.state;
@@ -65,8 +55,6 @@ export function getLeafFilePath(leaf: WorkspaceLeaf): string | null {
 }
 
 // ─── Pure Helper — Remove a Node From Its Current Position ───────────────────
-// Accepts and returns plain state slices; never touches Zustand's set/get.
-// This keeps moveNode, removeTab, and deleteGroup DRY while staying immutable.
 function removeNodeFromParent(
   nodeId: string,
   nodes: Record<string, CustomTreeNode>,
@@ -75,12 +63,10 @@ function removeNodeFromParent(
   const node = nodes[nodeId];
   if (!node) return { nodes, rootIds };
 
-  // New nodes map — shallow copy so we can mutate safely
   const newNodes: Record<string, CustomTreeNode> = { ...nodes };
   const parentId = node.parentId;
 
   if (parentId !== null && newNodes[parentId]?.type === "group") {
-    // Rule 3: spread parent to produce a new reference
     const parent = newNodes[parentId] as GroupNode;
     newNodes[parentId] = {
       ...parent,
@@ -89,7 +75,6 @@ function removeNodeFromParent(
     return { nodes: newNodes, rootIds };
   }
 
-  // Node is at root — filter produces a new array (immutable, Rule 3)
   return {
     nodes: newNodes,
     rootIds: rootIds.filter((id) => id !== nodeId),
@@ -99,146 +84,53 @@ function removeNodeFromParent(
 // ─── Store Interface ──────────────────────────────────────────────────────────
 
 export interface TabStoreState {
-  // ── Persistent (synced to data.json via savedTreeState) ──────────────────
   nodes: Record<string, CustomTreeNode>;
   rootIds: string[];
-
-  // ── Ephemeral runtime (never persisted) ──────────────────────────────────
   activeLeafId: string | null;
   searchQuery: string;
   _saveCallback: (() => void) | null;
 
-  // ── Setup ─────────────────────────────────────────────────────────────────
-  /** Register the plugin's debounced save function. Call once in onload(). */
   setSaveCallback: (cb: () => void) => void;
-
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-  /**
-   * Loads saved group structures and tab metadata from data.json into the store.
-   * TabNode.leaf fields remain undefined until syncLeaves() runs.
-   * Called once at plugin startup, before workspace layout is ready.
-   */
   hydrateStore: (savedState: SerializedTreeState) => void;
-
-  /**
-   * Reconciles the store's TabNodes with the list of currently-open WorkspaceLeaves.
-   * - Binds live leaves to existing TabNodes by leafId.
-   * - Creates new root TabNodes for leaves that aren't in the store yet.
-   * - Removes TabNodes for leaves that have been closed.
-   * Triggers a debounced save only when the tree structure actually changed.
-   */
   syncLeaves: (leaves: WorkspaceLeaf[]) => void;
-
-  // ── Tree Mutations — Rule 1: every mutation MUST trigger _triggerSave() ──
-
-  /**
-   * Creates a new GroupNode and inserts it at the end of the target parent
-   * (or at root level if parentId is null/undefined).
-   * @returns The new group's ID.
-   */
   createGroup: (title: string, parentId?: string | null) => string;
-
-  /** Renames any node (tab or group) by ID. */
   renameNode: (id: string, title: string) => void;
-
-  /**
-   * Moves any node to a new parent (or root) at a specific index.
-   * targetIndex is relative to the target parent's children AFTER the
-   * dragged node has been removed — consistent with HTML5 DnD semantics.
-   */
   moveNode: (
     nodeId: string,
     targetParentId: string | null,
     targetIndex?: number,
   ) => void;
-
-  /** Toggles a group's isCollapsed state. */
   toggleCollapse: (groupId: string) => void;
-
-  /**
-   * Deletes a group, promoting all its direct children one level up
-   * (into the group's parent, or root). Tabs are preserved.
-   */
   deleteGroup: (groupId: string) => void;
-
-  /**
-   * Removes a tab from the store AND detaches its WorkspaceLeaf
-   * from Obsidian's workspace (closes the tab in the UI).
-   */
   removeTab: (tabId: string) => void;
-
-  /** Sets a custom Lucide icon override on any node. */
   setNodeIcon: (id: string, icon: string) => void;
-
-  /** Sets a CSS accent color override on any node. */
   setNodeColor: (id: string, color: string) => void;
-
-  /**
-   * Marks a tab as deliberately hidden: captures filePath/viewState, clears
-   * the live leaf, sets detached: true. Never touches parentId/childrenIds
-   * or removes the node — it stays exactly where it is in the tree. Only
-   * called by GroupSplitService.close(); an ordinary tab close still goes
-   * through syncLeaves()'s existing removal path untouched.
-   */
   detachTab: (id: string, filePath: string, viewState: ViewState) => void;
-
-  /**
-   * Re-binds a detached tab to a freshly created leaf: sets the new
-   * leaf/leafId, refreshes title/viewType, clears detached/filePath/
-   * viewState. Used by GroupSplitService.open() when restoring, and by
-   * syncLeaves() when the user reopens a tracked file externally.
-   */
   restoreTab: (id: string, leaf: WorkspaceLeaf) => void;
-
-  // ── Runtime — no persistence trigger ─────────────────────────────────────
-
-  /** Updates which leaf is currently focused. Driven by active-leaf-change events. */
   setActiveLeaf: (leafId: string | null) => void;
-
-  /** Updates the search query for real-time tree filtering. */
   setSearchQuery: (query: string) => void;
-
-  /**
-   * Re-binds a live WorkspaceLeaf to a TabNode without triggering full syncLeaves().
-   * Used by the active-leaf-change event handler to keep titles current.
-   */
   updateLeafBinding: (leafId: string, leaf: WorkspaceLeaf) => void;
-
-  // ── Serialization ─────────────────────────────────────────────────────────
-
-  /** Produces the data.json-safe snapshot of the current tree state. */
   getSerializedState: () => SerializedTreeState;
-
-  // ── Internal ──────────────────────────────────────────────────────────────
-  /** Fires the registered save callback. Called at the end of every mutation. */
   _triggerSave: () => void;
 }
 
 // ─── Store Implementation ─────────────────────────────────────────────────────
 
 export const useTabStore = create<TabStoreState>()((set, get) => ({
-  // ── Initial State ──────────────────────────────────────────────────────────
   nodes: {},
   rootIds: [],
   activeLeafId: null,
   searchQuery: "",
   _saveCallback: null,
 
-  // ── Setup ──────────────────────────────────────────────────────────────────
   setSaveCallback: (cb) => set({ _saveCallback: cb }),
 
-  // ── Internal ──────────────────────────────────────────────────────────────
   _triggerSave: () => {
-    // Safe call — noop if callback hasn't been registered yet
     get()._saveCallback?.();
   },
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
-
   hydrateStore: (savedState) => {
     const { nodes, rootIds } = deserializeTreeState(savedState);
-
-    // Log any referential integrity warnings — do NOT throw; continue with what we have
     const warnings = validateTreeIntegrity(nodes, rootIds);
     if (warnings.length > 0) {
       console.warn(
@@ -246,19 +138,15 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
           warnings.map((w: string) => `  • ${w}`).join("\n"),
       );
     }
-
     set({ nodes, rootIds });
   },
 
   syncLeaves: (leaves) => {
     const { nodes, rootIds } = get();
-
-    // Work on copies — never mutate the current Zustand state directly (Rule 3)
     const newNodes: Record<string, CustomTreeNode> = { ...nodes };
     const newRootIds: string[] = [...rootIds];
     let structurallyChanged = false;
 
-    // ── Phase 1: Build a fast leafId → nodeId reverse-lookup ──────────────
     const leafIdToNodeId = new Map<string, string>();
     for (const [id, node] of Object.entries(newNodes)) {
       if (node.type === "tab") {
@@ -266,23 +154,19 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
       }
     }
 
-    // ── Phase 2: Walk every live leaf ─────────────────────────────────────
     const openLeafIds = new Set<string>();
 
     for (const leaf of leaves) {
       const leafId = getLeafId(leaf);
-      if (!leafId) continue; // Skip leaves without an ID (defensive)
+      if (!leafId) continue;
       openLeafIds.add(leafId);
 
       if (leafIdToNodeId.has(leafId)) {
-        // ── Existing node: bind the live leaf + refresh derived fields ──
         const nodeId = leafIdToNodeId.get(leafId)!;
         const existing = newNodes[nodeId] as TabNode;
         const freshTitle = safeGetLeafTitle(leaf);
         const freshViewType = safeGetViewType(leaf);
 
-        // Always update the leaf reference (ephemeral — no save needed for this alone).
-        // Only flag as structurally changed when persisted fields differ.
         if (
           existing.title !== freshTitle ||
           existing.viewType !== freshViewType
@@ -290,7 +174,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
           structurallyChanged = true;
         }
 
-        // Produce a new object reference (Rule 3)
         newNodes[nodeId] = {
           ...existing,
           leaf,
@@ -298,11 +181,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
           viewType: freshViewType,
         };
       } else {
-        // ── New leaf: check for a detached tracked tab to re-bind first ──
-        // If the user reopened a file that's tracked-but-hidden in some
-        // group, this leaf belongs to that existing node, not a new root
-        // one — even though its leafId has never been seen before (the old
-        // leaf is gone; this is a fresh leaf for the same file).
         const filePath = getLeafFilePath(leaf);
         const detachedMatch = filePath
           ? (Object.values(newNodes).find(
@@ -325,7 +203,7 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
             filePath: undefined,
             viewState: undefined,
           };
-          leafIdToNodeId.delete(detachedMatch.leafId); // stale, now-dead leafId
+          leafIdToNodeId.delete(detachedMatch.leafId);
           leafIdToNodeId.set(leafId, detachedMatch.id);
           structurallyChanged = true;
 
@@ -339,7 +217,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
               : `TabEngine: Opened "${freshTitle}", restored to its tracked tab.`,
           );
         } else {
-          // ── Genuinely new leaf: create a root-level TabNode ────────────
           const newId = generateId();
           const newTab: TabNode = {
             id: newId,
@@ -358,11 +235,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
       }
     }
 
-    // ── Phase 3: Collect stale TabNodes (leaves that are no longer open) ──
-    // Collect IDs first, then delete — avoids mid-iteration mutation.
-    // Detached nodes are deliberately excluded: their leafId is EXPECTED to
-    // be missing from openLeafIds (that's what "hidden by the Eye toggle"
-    // means) — that's not the same signal as "the user closed this tab".
     const toRemove: string[] = [];
     for (const [id, node] of Object.entries(newNodes)) {
       if (
@@ -374,20 +246,17 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
       }
     }
 
-    // ── Phase 4: Remove stale nodes from the tree ─────────────────────────
     for (const removeId of toRemove) {
       const staleTab = newNodes[removeId] as TabNode;
       const parentId = staleTab.parentId;
 
       if (parentId !== null && newNodes[parentId]?.type === "group") {
-        // Remove from parent group's childrenIds (Rule 3: spread to new ref)
         const parent = newNodes[parentId] as GroupNode;
         newNodes[parentId] = {
           ...parent,
           childrenIds: parent.childrenIds.filter((cid) => cid !== removeId),
         };
       } else {
-        // Remove from rootIds
         const idx = newRootIds.indexOf(removeId);
         if (idx !== -1) newRootIds.splice(idx, 1);
       }
@@ -396,16 +265,12 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
       structurallyChanged = true;
     }
 
-    // Commit in a single set call to prevent intermediate renders
     set({ nodes: newNodes, rootIds: newRootIds });
 
-    // Only persist when the structure actually changed — prevents noisy writes
     if (structurallyChanged) {
       get()._triggerSave();
     }
   },
-
-  // ── Tree Mutations ─────────────────────────────────────────────────────────
 
   createGroup: (title, parentId = null) => {
     const { nodes, rootIds } = get();
@@ -420,7 +285,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
       isCollapsed: false,
     };
 
-    // Start from a spread copy of nodes (Rule 3)
     const newNodes: Record<string, CustomTreeNode> = {
       ...nodes,
       [id]: newGroup,
@@ -428,19 +292,17 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     const newRootIds = [...rootIds];
 
     if (parentId !== null && nodes[parentId]?.type === "group") {
-      // Append to end of parent group
       const parent = nodes[parentId] as GroupNode;
       newNodes[parentId] = {
         ...parent,
         childrenIds: [...parent.childrenIds, id],
       };
     } else {
-      // Append to root level
       newRootIds.push(id);
     }
 
     set({ nodes: newNodes, rootIds: newRootIds });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
     return id;
   },
 
@@ -449,14 +311,13 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     const node = nodes[id];
     if (!node) return;
 
-    // Rule 3: spread both the nodes map and the specific node
     set({
       nodes: {
         ...nodes,
         [id]: { ...node, title },
       },
     });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   moveNode: (nodeId, targetParentId, targetIndex) => {
@@ -464,65 +325,87 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     const node = nodes[nodeId];
     if (!node) return;
 
-    // Step 1: Remove from current position, get immutable copies back
+    // حظر الحلقات الدائرية
+    if (node.type === "group" && targetParentId !== null) {
+      let currentParentId: string | null = targetParentId;
+      while (currentParentId !== null) {
+        if (currentParentId === nodeId) return;
+        currentParentId = nodes[currentParentId]?.parentId ?? null;
+      }
+    }
+
+    const sourceParentId = node.parentId;
+    let adjustedTargetIndex = targetIndex;
+
+    // تصحيح زحزحة الفهرس عند إعادة الترتيب ضمن نفس المستوى
+    if (
+      sourceParentId === targetParentId &&
+      adjustedTargetIndex !== undefined
+    ) {
+      const siblings =
+        sourceParentId !== null && nodes[sourceParentId]?.type === "group"
+          ? (nodes[sourceParentId] as GroupNode).childrenIds
+          : rootIds;
+
+      const currentIndex = siblings.indexOf(nodeId);
+      if (currentIndex !== -1 && currentIndex < adjustedTargetIndex) {
+        adjustedTargetIndex -= 1;
+      }
+    }
+
     const { nodes: nodesAfterRemove, rootIds: rootIdsAfterRemove } =
       removeNodeFromParent(nodeId, nodes, rootIds);
 
-    // Step 2: Update the node's parentId (Rule 3: new object ref)
     const newNodes: Record<string, CustomTreeNode> = {
       ...nodesAfterRemove,
       [nodeId]: { ...node, parentId: targetParentId },
     };
     const newRootIds = [...rootIdsAfterRemove];
 
-    // Step 3: Insert into the new position
     if (targetParentId !== null && newNodes[targetParentId]?.type === "group") {
       const parent = newNodes[targetParentId] as GroupNode;
       const newChildren = [...parent.childrenIds];
       const insertAt =
-        targetIndex !== undefined
-          ? Math.min(targetIndex, newChildren.length)
+        adjustedTargetIndex !== undefined
+          ? Math.max(0, Math.min(adjustedTargetIndex, newChildren.length))
           : newChildren.length;
+
       newChildren.splice(insertAt, 0, nodeId);
-      // Rule 3: new parent reference with new children array
       newNodes[targetParentId] = { ...parent, childrenIds: newChildren };
     } else {
       const insertAt =
-        targetIndex !== undefined
-          ? Math.min(targetIndex, newRootIds.length)
+        adjustedTargetIndex !== undefined
+          ? Math.max(0, Math.min(adjustedTargetIndex, newRootIds.length))
           : newRootIds.length;
+
       newRootIds.splice(insertAt, 0, nodeId);
     }
 
     set({ nodes: newNodes, rootIds: newRootIds });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   toggleCollapse: (groupId) => {
     const { nodes } = get();
     const node = nodes[groupId];
-    // Rule 5: strict type narrowing
     if (!node || node.type !== "group") return;
 
     const group = node as GroupNode;
-    // Rule 3: new object reference for both the map and the group
     set({
       nodes: {
         ...nodes,
         [groupId]: { ...group, isCollapsed: !group.isCollapsed },
       },
     });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   deleteGroup: (groupId) => {
     const { nodes, rootIds } = get();
     const node = nodes[groupId];
-    // Rule 5: strict type narrowing
     if (!node || node.type !== "group") return;
 
     const group = node as GroupNode;
-    // Rule 2: defensive Array.isArray guard before operating on childrenIds
     const childrenIds: string[] = Array.isArray(group.childrenIds)
       ? [...group.childrenIds]
       : [];
@@ -531,15 +414,12 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     const newNodes: Record<string, CustomTreeNode> = { ...nodes };
     const newRootIds = [...rootIds];
 
-    // Re-parent every direct child to the group's own parent (one level up)
     for (const childId of childrenIds) {
       if (newNodes[childId]) {
-        // Rule 3: new object ref for each re-parented child
         newNodes[childId] = { ...newNodes[childId], parentId };
       }
     }
 
-    // Splice the group out of its container, inserting children in its place
     if (parentId !== null && newNodes[parentId]?.type === "group") {
       const parent = newNodes[parentId] as GroupNode;
       const groupIdx = parent.childrenIds.indexOf(groupId);
@@ -548,12 +428,10 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
         ...childrenIds,
         ...parent.childrenIds.slice(groupIdx + 1),
       ];
-      // Rule 3: new parent ref
       newNodes[parentId] = { ...parent, childrenIds: newChildren };
     } else {
       const groupIdx = newRootIds.indexOf(groupId);
       if (groupIdx !== -1) {
-        // Replace the group ID with its children IDs in-place
         newRootIds.splice(groupIdx, 1, ...childrenIds);
       }
     }
@@ -561,18 +439,15 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     delete newNodes[groupId];
 
     set({ nodes: newNodes, rootIds: newRootIds });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   removeTab: (tabId) => {
     const { nodes, rootIds } = get();
     const node = nodes[tabId];
-    // Rule 5: strict type narrowing
     if (!node || node.type !== "tab") return;
 
     const tab = node as TabNode;
-
-    // Detach the live leaf from Obsidian's workspace first (closes the editor pane)
     tab.leaf?.detach();
 
     const newNodes: Record<string, CustomTreeNode> = { ...nodes };
@@ -580,7 +455,6 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
 
     if (tab.parentId !== null && newNodes[tab.parentId]?.type === "group") {
       const parent = newNodes[tab.parentId] as GroupNode;
-      // Rule 3: new parent ref with filtered children
       newNodes[tab.parentId] = {
         ...parent,
         childrenIds: parent.childrenIds.filter((id) => id !== tabId),
@@ -593,25 +467,23 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
     delete newNodes[tabId];
 
     set({ nodes: newNodes, rootIds: newRootIds });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   setNodeIcon: (id, icon) => {
     const { nodes } = get();
     const node = nodes[id];
     if (!node) return;
-    // Rule 3: two levels of spread
     set({ nodes: { ...nodes, [id]: { ...node, icon } } });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   setNodeColor: (id, color) => {
     const { nodes } = get();
     const node = nodes[id];
     if (!node) return;
-    // Rule 3: two levels of spread
     set({ nodes: { ...nodes, [id]: { ...node, color } } });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
 
   detachTab: (id, filePath, viewState) => {
@@ -630,7 +502,7 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
         },
       },
     });
-    get()._triggerSave(); // Persisted: this IS what makes restore-after-restart possible.
+    get()._triggerSave();
   },
 
   restoreTab: (id, leaf) => {
@@ -652,10 +524,8 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
         },
       },
     });
-    get()._triggerSave(); // Rule 1
+    get()._triggerSave();
   },
-
-  // ── Runtime Mutations (no save trigger) ───────────────────────────────────
 
   setActiveLeaf: (leafId) => set({ activeLeafId: leafId }),
 
@@ -664,11 +534,9 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
   updateLeafBinding: (leafId, leaf) => {
     const { nodes } = get();
 
-    // O(n) scan — acceptable since this runs only on active-leaf-change events
     for (const [id, node] of Object.entries(nodes)) {
       if (node.type === "tab" && (node as TabNode).leafId === leafId) {
         const tab = node as TabNode;
-        // Rule 3: new object ref
         set({
           nodes: {
             ...nodes,
@@ -680,12 +548,10 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
             },
           },
         });
-        return; // Match found — stop iterating
+        return;
       }
     }
   },
-
-  // ── Serialization ──────────────────────────────────────────────────────────
 
   getSerializedState: () => {
     const { nodes, rootIds } = get();
@@ -693,24 +559,17 @@ export const useTabStore = create<TabStoreState>()((set, get) => ({
   },
 }));
 
-// ─── Selector Helpers ─────────────────────────────────────────────────────────
-// Pre-built selectors that return the module-scoped EMPTY_ARRAY fallback
-// so components that consume them do not get a new [] reference on every render.
-
-/** Returns a group's childrenIds, or EMPTY_ARRAY if the node is missing/not a group. */
 export function selectChildrenIds(
   nodes: Record<string, CustomTreeNode>,
   groupId: string,
 ): readonly string[] {
   const node = nodes[groupId];
   if (!node || node.type !== "group") return EMPTY_ARRAY;
-  // Rule 2: Array.isArray guard before returning
   return Array.isArray((node as GroupNode).childrenIds)
     ? (node as GroupNode).childrenIds
     : EMPTY_ARRAY;
 }
 
-/** Returns rootIds, or EMPTY_ARRAY if the store is empty. */
 export function selectRootIds(rootIds: string[]): readonly string[] {
   return Array.isArray(rootIds) && rootIds.length > 0 ? rootIds : EMPTY_ARRAY;
 }

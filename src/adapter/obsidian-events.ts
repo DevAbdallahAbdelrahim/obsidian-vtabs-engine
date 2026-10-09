@@ -10,25 +10,21 @@ function getLeafId(leaf: WorkspaceLeaf): string {
 }
 
 /**
- * Collects every currently-open WorkspaceLeaf across the whole workspace
- * tree (main area + sidebars) and hands them to the store's syncLeaves()
- * reconciler. Per Core Philosophy ("Manual-First"), TabEngine surfaces
- * everything rather than pre-filtering by pane — the user decides what to
- * manually organize.
+ * Collects currently-open WorkspaceLeaf instances exclusively across the main
+ * editor root area, completely excluding sidebars (Search, Bookmarks, Files, etc.).
  */
 function collectAllLeaves(plugin: Plugin): WorkspaceLeaf[] {
   const leaves: WorkspaceLeaf[] = [];
-  plugin.app.workspace.iterateAllLeaves((leaf) => {
+  // استخدام iterateRootLeaves لجلب التابات الأساسية للمحرر الرئيسي فقط واستبعاد الشريط الجانبي
+  plugin.app.workspace.iterateRootLeaves((leaf) => {
     leaves.push(leaf);
   });
   return leaves;
 }
 
 /**
- * Runs a full leaf sync. Exported standalone (not just used internally by
- * registerWorkspaceEvents) so main.ts can also trigger a manual resync —
- * e.g. after the Settings tab's "Reset layout" action clears the tree and
- * needs open leaves re-appended as fresh root tabs.
+ * Runs a full leaf sync. Exported standalone so main.ts or workspace events
+ * can trigger a manual resync whenever tabs change.
  */
 export function syncAllLeaves(plugin: Plugin): void {
   useTabStore.getState().syncLeaves(collectAllLeaves(plugin));
@@ -38,36 +34,23 @@ export function syncAllLeaves(plugin: Plugin): void {
  * Wires up every Obsidian workspace event TabEngine needs to keep its
  * Zustand tree in sync with live WorkspaceLeaf instances.
  *
- * Called once from TabEnginePlugin.onload(). All listeners are registered
- * via plugin.registerEvent(), so Obsidian automatically detaches them on
- * plugin unload — no manual cleanup required here.
+ * Fully compliant with Obsidian 1.14.4+ workspace lifecycle events.
  */
 export function registerWorkspaceEvents(plugin: TabEnginePlugin): void {
-  // Initial sync: fires once Obsidian has restored the previous session's
-  // leaves — the earliest safe point to bind saved TabNodes to their live
-  // WorkspaceLeaf counterparts.
+  // Initial sync: fires once Obsidian has restored the previous session's leaves.
   plugin.app.workspace.onLayoutReady(() => syncAllLeaves(plugin));
 
-  // Fires on nearly every structural change: split, tab open/close, move
-  // between panes, sidebar toggle. syncLeaves() itself only persists when
-  // something structural actually changed, so re-running it liberally here
-  // is cheap. Deduplication (opt-in via autoDeduplicateTabs, read live on
-  // every event so the toggle takes effect without a reload) runs first: if
-  // it closes a duplicate leaf, the sync that follows reconciles against
-  // the already-deduplicated set, rather than briefly creating a TabNode
-  // for a leaf about to disappear.
+  // Fires on structural changes (splits, panes, sidebar toggles).
   plugin.registerEvent(
     plugin.app.workspace.on("layout-change", () => {
       if (plugin.settings.autoDeduplicateTabs) {
         DeduplicationService.reconcile(plugin);
       }
       syncAllLeaves(plugin);
-    })
+    }),
   );
 
-  // Fires when focus moves to a different leaf — tracks the active tab for
-  // highlighting, and refreshes that leaf's title/viewType immediately
-  // rather than waiting for the next layout-change.
+  // Fires when focus moves or a new leaf is created/focused.
   plugin.registerEvent(
     plugin.app.workspace.on("active-leaf-change", (leaf) => {
       const store = useTabStore.getState();
@@ -83,13 +66,20 @@ export function registerWorkspaceEvents(plugin: TabEnginePlugin): void {
       if (leafId) {
         store.updateLeafBinding(leafId, leaf);
       }
-    })
+
+      syncAllLeaves(plugin);
+    }),
   );
 
-  // File renames are a Vault event, not a Workspace event — Obsidian's own
-  // TypeScript API docs confirm Vault.on('rename') exists and Workspace has
-  // no 'rename' event at all. They change a leaf's display text without
-  // necessarily firing layout-change, so this keeps titles accurate
-  // independently of that.
-  plugin.registerEvent(plugin.app.vault.on("rename", () => syncAllLeaves(plugin)));
+  // Fires explicitly when any note/file is opened
+  plugin.registerEvent(
+    plugin.app.workspace.on("file-open", () => {
+      syncAllLeaves(plugin);
+    }),
+  );
+
+  // File renames are a Vault event — updates display titles independently.
+  plugin.registerEvent(
+    plugin.app.vault.on("rename", () => syncAllLeaves(plugin)),
+  );
 }

@@ -29,30 +29,37 @@ export class TabEngineSettingTab extends PluginSettingTab {
           .addOption("none", "Hidden")
           .setValue(this.plugin.settings.ribbonIconStyle)
           .onChange(async (value) => {
-            this.plugin.settings.ribbonIconStyle = value as "brand" | "native" | "none";
+            this.plugin.settings.ribbonIconStyle = value as
+              "brand" | "native" | "none";
             await this.plugin.saveSettings();
             this.plugin.refreshRibbonIcon();
-          })
+          }),
       );
 
     new Setting(containerEl)
       .setName("Show tab icons")
       .setDesc("Display a view-type icon next to each tab in the panel.")
       .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.showTabIcons).onChange(async (value) => {
-          this.plugin.settings.showTabIcons = value;
-          await this.plugin.saveSettings();
-        })
+        toggle
+          .setValue(this.plugin.settings.showTabIcons)
+          .onChange(async (value) => {
+            this.plugin.settings.showTabIcons = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl)
       .setName("Show group tab count")
-      .setDesc("Display the number of open tabs next to each group name in the panel.")
+      .setDesc(
+        "Display the number of open tabs next to each group name in the panel.",
+      )
       .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.showGroupTabCount).onChange(async (value) => {
-          this.plugin.settings.showGroupTabCount = value;
-          await this.plugin.saveSettings();
-        })
+        toggle
+          .setValue(this.plugin.settings.showGroupTabCount)
+          .onChange(async (value) => {
+            this.plugin.settings.showGroupTabCount = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl)
@@ -66,7 +73,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
             this.plugin.settings.defaultGroupIcon =
               value.trim() || DEFAULT_SETTINGS.defaultGroupIcon;
             await this.plugin.saveSettings();
-          })
+          }),
       )
       .addExtraButton((btn) =>
         btn
@@ -76,9 +83,9 @@ export class TabEngineSettingTab extends PluginSettingTab {
             new IconPickerModal(this.app, (iconName) => {
               this.plugin.settings.defaultGroupIcon = iconName;
               void this.plugin.saveSettings();
-              this.display(); // Refresh so the text field reflects the picked icon
+              this.display();
             }).open();
-          })
+          }),
       );
 
     new Setting(containerEl)
@@ -91,17 +98,19 @@ export class TabEngineSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.indentSize = value;
             await this.plugin.saveSettings();
-          })
+          }),
       );
 
     new Setting(containerEl)
       .setName("Compact view")
       .setDesc("Reduce vertical padding for a denser tab list.")
       .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.compactView).onChange(async (value) => {
-          this.plugin.settings.compactView = value;
-          await this.plugin.saveSettings();
-        })
+        toggle
+          .setValue(this.plugin.settings.compactView)
+          .onChange(async (value) => {
+            this.plugin.settings.compactView = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl).setName("Tab behavior").setHeading();
@@ -109,43 +118,15 @@ export class TabEngineSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Auto-deduplicate tabs")
       .setDesc(
-        "Close extra tabs that show the same file, keeping the one you're using (or a pinned one). Tabs inside groups are never closed this way. Takes effect the next time your layout changes."
-      )
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.autoDeduplicateTabs).onChange(async (value) => {
-          this.plugin.settings.autoDeduplicateTabs = value;
-          await this.plugin.saveSettings();
-        })
-      );
-
-    new Setting(containerEl).setName("Focus View").setHeading();
-
-    new Setting(containerEl)
-      .setName("Auto-collapse managed group splits")
-      .setDesc(
-        "Automatically collapse split panes created by VTab Engine when their grouped tabs are hidden."
+        "Close extra tabs that show the same file, keeping the one you're using (or a pinned one). Tabs inside groups are never closed this way. Takes effect the next time your layout changes.",
       )
       .addToggle((toggle) =>
         toggle
-          .setValue(this.plugin.settings.autoCollapseManagedSplits)
+          .setValue(this.plugin.settings.autoDeduplicateTabs)
           .onChange(async (value) => {
-            this.plugin.settings.autoCollapseManagedSplits = value;
+            this.plugin.settings.autoDeduplicateTabs = value;
             await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Auto-collapse standalone splits")
-      .setDesc(
-        "Automatically close split panes containing only ungrouped or isolated tabs during Focus View. Closed tabs stay in the panel and can be restored."
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.autoCollapseStandaloneSplits)
-          .onChange(async (value) => {
-            this.plugin.settings.autoCollapseStandaloneSplits = value;
-            await this.plugin.saveSettings();
-          })
+          }),
       );
 
     new Setting(containerEl).setName("Danger zone").setHeading();
@@ -153,7 +134,7 @@ export class TabEngineSettingTab extends PluginSettingTab {
     const resetSetting = new Setting(containerEl)
       .setName("Reset tab layout")
       .setDesc(
-        "Deletes all manual groups and forgets the saved tab structure. Open tabs themselves are not closed."
+        "Deletes all manual groups and forgets the saved tab structure. Open tabs themselves are not closed.",
       );
 
     resetSetting.addButton((btn) => {
@@ -164,8 +145,6 @@ export class TabEngineSettingTab extends PluginSettingTab {
 
       btn.setButtonText("Reset layout").onClick(async () => {
         if (!this.resetArmed) {
-          // First click just arms the button — requires a second, deliberate
-          // click within 4s to actually wipe the saved layout.
           this.resetArmed = true;
           btn.setButtonText("Click again to confirm").setCta();
           window.setTimeout(applyIdleLabel, 4000);
@@ -174,8 +153,10 @@ export class TabEngineSettingTab extends PluginSettingTab {
 
         this.plugin.settings.savedTreeState = { nodes: {}, rootIds: [] };
         await this.plugin.saveSettings();
-        useTabStore.getState().hydrateStore(this.plugin.settings.savedTreeState);
-        this.plugin.syncNow(); // Re-append currently open leaves as fresh root tabs
+        useTabStore
+          .getState()
+          .hydrateStore(this.plugin.settings.savedTreeState);
+        this.plugin.syncNow();
         applyIdleLabel();
         new Notice("TabEngine: tab layout has been reset.");
       });

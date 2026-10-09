@@ -5,6 +5,7 @@ import { GroupNode, CustomTreeNode } from "../../types/tree";
 import { useTabStore, EMPTY_ARRAY } from "../../store/tab-store";
 import { ObsidianIcon } from "./ObsidianIcon";
 import { resolveNodeIcon } from "../../engine/icon-engine";
+import { getSiblingIds } from "../../utils/tree-utils";
 import { usePlugin, useSettings } from "../context/plugin-context";
 import { RenameModal } from "../../modals/rename-modal";
 import { IconPickerModal } from "../../modals/icon-picker-modal";
@@ -28,11 +29,11 @@ function collectGroupAndDescendantIds(
 ): Set<string> {
   const ids = new Set<string>([groupId]);
   const node = nodes[groupId];
-  if (!node || node.type !== "group") return ids; // Rule 5: strict discriminant
+  if (!node || node.type !== "group") return ids;
 
   const childrenIds = Array.isArray(node.childrenIds)
     ? node.childrenIds
-    : EMPTY_ARRAY; // Rule 2
+    : EMPTY_ARRAY;
   for (const childId of childrenIds) {
     if (nodes[childId]?.type === "group") {
       for (const id of collectGroupAndDescendantIds(nodes, childId)) {
@@ -51,6 +52,7 @@ function TabGroupNodeImpl({
   const plugin = usePlugin();
   const settings = useSettings();
   const nodes = useTabStore((s) => s.nodes);
+  const rootIds = useTabStore((s) => s.rootIds);
   const toggleCollapse = useTabStore((s) => s.toggleCollapse);
   const renameNode = useTabStore((s) => s.renameNode);
   const moveNode = useTabStore((s) => s.moveNode);
@@ -59,16 +61,18 @@ function TabGroupNodeImpl({
   const setNodeColor = useTabStore((s) => s.setNodeColor);
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dropPosition, setDropPosition] = useState<
+    "top" | "bottom" | "inner" | null
+  >(null);
 
   const icon = resolveNodeIcon(node, settings.defaultGroupIcon);
-  // Rule 2 + reference-stable fallback (module-scoped EMPTY_ARRAY, never a fresh `[]`)
   const childrenIds = Array.isArray(node.childrenIds)
     ? node.childrenIds
     : EMPTY_ARRAY;
 
   const handleToggle = useCallback(
     (e: React.MouseEvent) => {
-      e.stopPropagation(); // Rule 4: must not bubble to an ancestor group's header
+      e.stopPropagation();
       toggleCollapse(node.id);
     },
     [node.id, toggleCollapse],
@@ -77,7 +81,7 @@ function TabGroupNodeImpl({
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      e.stopPropagation(); // Rule 4
+      e.stopPropagation();
 
       const menu = new Menu();
 
@@ -154,7 +158,7 @@ function TabGroupNodeImpl({
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
-      e.stopPropagation(); // Rule 4
+      e.stopPropagation();
       e.dataTransfer.setData(DRAG_MIME, node.id);
       e.dataTransfer.effectAllowed = "move";
     },
@@ -163,32 +167,58 @@ function TabGroupNodeImpl({
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // Rule 4
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+
+    // تحديد منطقة الإفلات بدقة: أعلى 30% للأعلى، أسفل 30% للأسفل، والمنتصف للإدخال للداخل
+    let pos: "top" | "bottom" | "inner" = "inner";
+    if (y < height * 0.3) {
+      pos = "top";
+    } else if (y > height * 0.7) {
+      pos = "bottom";
+    }
+
+    setDropPosition(pos);
     setIsDragOver(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.stopPropagation(); // Rule 4
+    e.stopPropagation();
     setIsDragOver(false);
+    setDropPosition(null);
   }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      e.stopPropagation(); // Rule 4
+      e.stopPropagation();
       setIsDragOver(false);
+      const currentDropPos = dropPosition;
+      setDropPosition(null);
 
       const draggedId = e.dataTransfer.getData(DRAG_MIME);
       if (!draggedId || draggedId === node.id) return;
 
-      // Guard against dropping a group inside its own subtree (would cycle).
+      // منع وضع المجموعة داخل نفسها أو داخل أبنائها (Circular Nesting Guard)
       const forbidden = collectGroupAndDescendantIds(nodes, draggedId);
       if (forbidden.has(node.id)) return;
 
-      // Drop-on-group-header = "nest inside this group" (append to end).
-      moveNode(draggedId, node.id);
+      if (currentDropPos === "top" || currentDropPos === "bottom") {
+        // إعادة ترتيب كمجموعات شقيقة (أعلى أو أسفل هذه المجموعة)
+        const siblings = getSiblingIds(nodes, rootIds, node.id);
+        const targetIndex =
+          siblings.indexOf(node.id) + (currentDropPos === "bottom" ? 1 : 0);
+        moveNode(draggedId, node.parentId, targetIndex);
+      } else {
+        // إفلات في المنتصف = إدخال داخل هذه المجموعة (تلقائياً في الأسفل/النهاية)
+        moveNode(draggedId, node.id);
+      }
     },
-    [node.id, nodes, moveNode],
+    [node.id, node.parentId, nodes, rootIds, moveNode, dropPosition],
   );
 
   const headerStyle: React.CSSProperties = {
@@ -201,7 +231,9 @@ function TabGroupNodeImpl({
   return (
     <div className="tab-engine-group">
       <div
-        className={`tab-engine-group-header${isDragOver ? " is-drag-over" : ""}`}
+        className={`tab-engine-group-header${isDragOver ? " is-drag-over" : ""}${
+          dropPosition ? ` is-drag-${dropPosition}` : ""
+        }`}
         style={headerStyle}
         draggable
         onClick={handleToggle}
@@ -234,7 +266,4 @@ function TabGroupNodeImpl({
   );
 }
 
-// Section 6: Performance Isolation — isolates re-renders when switching
-// active leaves elsewhere in the tree; only this group's own prop changes
-// (rename, icon, color, collapse, children) force a re-render.
 export const TabGroupNode = React.memo(TabGroupNodeImpl);

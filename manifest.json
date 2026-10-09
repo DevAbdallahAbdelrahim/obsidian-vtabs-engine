@@ -1,7 +1,7 @@
 {
   "id": "vtabs-engine",
   "name": "VTabs Engine",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "minAppVersion": "1.12.0",
   "description": "Advanced tab and workspace group management engine.",
   "author": "Abdallah Abdelrahim",
